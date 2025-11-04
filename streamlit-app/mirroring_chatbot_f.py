@@ -8,18 +8,36 @@ import openai
 import gspread
 from google.oauth2.service_account import Credentials
 
-# ✅ Google Sheets 접근 권한 범위
-scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+# ✅ 1️⃣ 페이지 설정 먼저
+st.set_page_config(page_title="Mirroring Chatbot", layout="centered")
 
-# ✅ GCP 서비스 계정 인증
-creds = Credentials.from_service_account_info(st.secrets["GCP_SERVICE_ACCOUNT"], scopes=scope)
-gc = gspread.authorize(creds)
+# ✅ 2️⃣ secrets 확인 (테스트용)
+try:
+    st.write("🔍 secrets keys:", list(st.secrets.keys()))
+except Exception as e:
+    st.error(f"❌ secrets 로드 실패: {e}")
 
-# ✅ OpenAI 키 설정
-openai.api_key = st.secrets["OPENAI_API_KEY"]
+# ✅ 3️⃣ Google Sheets 인증
+try:
+    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+    gcp_info = st.secrets["GCP_SERVICE_ACCOUNT"]
+    creds = Credentials.from_service_account_info(gcp_info, scopes=scope)
+    gc = gspread.authorize(creds)
+    st.write("✅ Google 인증 완료")
 
-# ✅ 구글 시트 연결 (자신의 문서 ID로 교체)
-spreadsheet = gc.open_by_key("1TSfKYISlyU7tweTqIIuwXbgY43xt1POckUa4DSbeHJo")
+    # ✅ OpenAI API 설정
+    openai.api_key = st.secrets["OPENAI_API_KEY"]
+    st.write("✅ OpenAI 연결 완료")
+
+except Exception as e:
+    st.error(f"❌ 인증 오류: {e}")
+
+# ✅ 4️⃣ 이후 구글시트 연결
+try:
+    spreadsheet = gc.open_by_key("1TSfKYISlyU7tweTqIIuwXbgY43xt1POckUa4DSbeHJo")
+    st.write("✅ 시트 연결 완료")
+except Exception as e:
+    st.error(f"❌ 시트 연결 실패: {e}")
 
 # 시트 헤더 자동 삽입 함수
 def insert_headers_if_empty(worksheet, headers):
