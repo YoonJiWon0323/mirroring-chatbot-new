@@ -29,7 +29,6 @@ except Exception as e:
 # ✅ 4️⃣ 이후 구글시트 연결
 try:
     spreadsheet = gc.open_by_key("1TSfKYISlyU7tweTqIIuwXbgY43xt1POckUa4DSbeHJo")
-    st.write("✅ 시트 연결 완료")
 except Exception as e:
     st.error(f"❌ 시트 연결 실패: {e}")
 
