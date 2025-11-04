@@ -12,24 +12,16 @@ from google.oauth2.service_account import Credentials
 # ✅ 1️⃣ 페이지 설정 먼저
 st.set_page_config(page_title="Mirroring Chatbot", layout="centered")
 
-# ✅ 2️⃣ secrets 확인 (테스트용)
-try:
-    st.write("🔍 secrets keys:", list(st.secrets.keys()))
-except Exception as e:
-    st.error(f"❌ secrets 로드 실패: {e}")
-
 # ✅ 3️⃣ Google Sheets 인증
 try:
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     gcp_info = st.secrets["GCP_SERVICE_ACCOUNT"]
     creds = Credentials.from_service_account_info(gcp_info, scopes=scope)
     gc = gspread.authorize(creds)
-    st.write("✅ Google 인증 완료")
 
     # ✅ OpenAI API 설정
     openai.api_key = st.secrets["OPENAI_API_KEY"]
     client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
-    st.write("✅ OpenAI 연결 완료")
 
 except Exception as e:
     st.error(f"❌ 인증 오류: {e}")
@@ -50,8 +42,14 @@ def insert_headers_if_empty(worksheet, headers):
         st.error(f"헤더 추가 중 오류 발생: {e}")
 
 # 시트 연결
-survey_ws = spreadsheet.worksheet("survey")
-conversation_ws = spreadsheet.worksheet("conversation")
+if "spreadsheet" not in st.session_state:
+    st.session_state.spreadsheet = gc.open_by_key("1TSfKYISlyU7tweTqIIuwXbgY43xt1POckUa4DSbeHJo")
+    st.session_state.survey_ws = st.session_state.spreadsheet.worksheet("survey")
+    st.session_state.conversation_ws = st.session_state.spreadsheet.worksheet("conversation")
+
+spreadsheet = st.session_state.spreadsheet
+survey_ws = st.session_state.survey_ws
+conversation_ws = st.session_state.conversation_ws
 
 # 시트가 비어 있다면 헤더 자동 삽입
 insert_headers_if_empty(survey_ws, [
