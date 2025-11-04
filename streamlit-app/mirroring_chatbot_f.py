@@ -1,3 +1,4 @@
+from openai import OpenAI  # 추가
 import streamlit as st
 import json
 from datetime import datetime
@@ -27,6 +28,7 @@ try:
 
     # ✅ OpenAI API 설정
     openai.api_key = st.secrets["OPENAI_API_KEY"]
+    client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
     st.write("✅ OpenAI 연결 완료")
 
 except Exception as e:
@@ -103,7 +105,7 @@ if "chatbot_mode" in st.session_state:
     def update_style_prompt():
         history = "\n".join(st.session_state.user_history[-3:])
         prompt = f"""Analyze the user's writing style based on the following utterances:\n{history}\n\nSummarize the user's tone, formality, and personality. Be concise, and express the tone in Korean if possible."""
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-4o",
             messages=[{"role": "user", "content": prompt}]
         )
@@ -128,7 +130,7 @@ if st.session_state.get("phase") == "style_collection":
             st.markdown(user_input)
         if st.session_state.collection_index < 2:
             system_prompt = "You are a friendly chatbot collecting natural language samples from the user. Ask a new, casual and personal question each time based on their last reply."
-            response = openai.ChatCompletion.create(
+            response = client.chat.completions.create(
                 model="gpt-4o",
                 messages=[{"role": "system", "content": system_prompt}, *st.session_state.messages]
             )
@@ -149,7 +151,7 @@ elif st.session_state.get("phase") == "pre_task_notice":
         notice_text = "안녕하세요. 챗봇과 함께 3분 동안 여행 계획을 세워보세요. 궁금한 점이 있으면 언제든지 물어보셔도 됩니다."
     else:
         prompt = f"다음 말투에 맞춰, 사용자에게 3분간 여행 계획 대화를 시작하도록 제안하는 한국어 문장을 만들어줘.\n말투 요약: {st.session_state.style_prompt}"
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-4o",
             messages=[{"role": "user", "content": prompt}]
         )
@@ -177,7 +179,7 @@ elif st.session_state.get("phase") == "task_conversation":
             if st.session_state.chatbot_mode == "fixed"
             else f"""You are a Korean chatbot that mirrors the user's style.\nHere is the style guide:\n{st.session_state.style_prompt}\nRespond naturally in that style."""
         )
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-4o",
             messages=[{"role": "system", "content": system_instruction}, *st.session_state.messages[-6:]]
         )
