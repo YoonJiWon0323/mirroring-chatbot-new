@@ -28,7 +28,7 @@ except Exception as e:
 
 # ✅ 4️⃣ 이후 구글시트 연결
 try:
-    spreadsheet = gc.open_by_key("1TSfKYISlyU7tweTqIIuwXbgY43xt1POckUa4DSbeHJo")
+    spreadsheet = gc.open_by_key("1J9_hUfp4KIvZMfu7grEKmhbnScNPc91PKgWD4cZPIwE")
 except Exception as e:
     st.error(f"❌ 시트 연결 실패: {e}")
 
@@ -42,7 +42,7 @@ def insert_headers_if_empty(worksheet, headers):
 
 # 시트 연결
 if "spreadsheet" not in st.session_state:
-    st.session_state.spreadsheet = gc.open_by_key("1TSfKYISlyU7tweTqIIuwXbgY43xt1POckUa4DSbeHJo")
+    st.session_state.spreadsheet = gc.open_by_key("1J9_hUfp4KIvZMfu7grEKmhbnScNPc91PKgWD4cZPIwE")
     st.session_state.survey_ws = st.session_state.spreadsheet.worksheet("survey")
     st.session_state.conversation_ws = st.session_state.spreadsheet.worksheet("conversation")
 
@@ -52,16 +52,27 @@ conversation_ws = st.session_state.conversation_ws
 
 # 시트가 비어 있다면 헤더 자동 삽입
 insert_headers_if_empty(survey_ws, [
-    "timestamp", "user_id", "mode", "gender", "age", "education", "job",
-    "similarity", "trust", "enjoyment", "humanness", "reuse_intent", "usefulness",
+    "timestamp", "user_id", "mode",
+    "gender", "age", "education", "job",
+    # Moderator: AI Exposure
+    "ae1", "ae2", "ae3", "ae4",
+    # Mediator 1: Social Presence
+    "sp1", "sp2", "sp3", "sp4", "sp5",
+    # Mediator 2: Perceived Warmth
+    "pw1", "pw2", "pw3", "pw4",
+    # Mediator 3: Perceived Competence
+    "pc1", "pc2", "pc3", "pc4",
+    # Mediator 4: Trust
+    "tr1", "tr2", "tr3",
+    # DV: Continuance Usage Intention
+    "ci1", "ci2", "ci3", "ci4",
+    # Style summary
     "style_prompt"
 ])
 
 insert_headers_if_empty(conversation_ws, [
     "timestamp", "user_id", "role", "message"
 ])
-
-
 
 # 세션 초기화
 if "messages" not in st.session_state:
@@ -89,13 +100,34 @@ if st.session_state.phase == "mode_selection":
     with col1:
         if st.button("옵션 A"):
             st.session_state.chatbot_mode = "fixed"
-            st.session_state.phase = "style_collection"
+            st.session_state.phase = "moderator_survey"
             st.rerun()
     with col2:
         if st.button("옵션 B"):
             st.session_state.chatbot_mode = "mirroring"
-            st.session_state.phase = "style_collection"
+            st.session_state.phase = "moderator_survey"
             st.rerun()
+
+# 파트 0.5: Moderator(AI Exposure) 설문
+elif st.session_state.phase == "moderator_survey":
+    st.subheader("AI 사용 경험에 대해 알려주세요 (AI Exposure)")
+    scale = ["선택 안 함", "전혀 아니다", "아니다", "보통이다", "그렇다", "매우 그렇다"]
+
+    ae = [st.radio(q, scale) for q in [
+        "나는 AI 기반 기기나 서비스를 자주 사용한다.",
+        "AI는 내 일상생활에서 중요한 부분을 차지한다.",
+        "나는 AI를 자주 활용한다.",
+        "나는 일상생활에서 AI 기술에 익숙하다."
+    ]]
+
+    if st.button("다음 단계로 이동"):
+        if any(v == "선택 안 함" for v in ae):
+            st.warning("⚠️ 모든 문항에 응답해 주세요.")
+            st.stop()
+
+        st.session_state.ai_exposure = ae
+        st.session_state.phase = "style_collection"
+        st.rerun()
 
 # 말투 분석
 if "chatbot_mode" in st.session_state:
@@ -143,7 +175,6 @@ if st.session_state.get("phase") == "style_collection":
 
 # 파트 1.5: 과업 안내
 elif st.session_state.get("phase") == "pre_task_notice":
-    st.markdown(f"📝 **당신의 말투 분석 결과:** {st.session_state.style_prompt}")
     if st.session_state.chatbot_mode == "fixed":
         notice_text = "안녕하세요. 챗봇과 함께 3분 동안 여행 계획을 세워보세요. 궁금한 점이 있으면 언제든지 물어보셔도 됩니다."
     else:
@@ -193,65 +224,107 @@ elif st.session_state.get("phase") == "task_conversation":
 # 파트 3: 설문 + Google Sheets 저장
 elif st.session_state.get("phase") == "consent":
     st.subheader("🔒 설문 응답")
-    st.write("아래 항목에 응답해 주세요. 응답은 자동 저장되며, 대화 내용 저장은 선택사항입니다.")
-    demo_gender = st.radio("성별을 선택해 주세요:", ["선택 안 함", "남성", "여성", "기타"])
-    demo_age = st.selectbox("연령대를 선택해 주세요:", ["선택 안 함", "10대", "20대", "30대", "40대", "50대 이상"])
-    demo_edu = st.selectbox("최종 학력을 선택해 주세요:", ["선택 안 함", "고등학교 졸업 이하", "대학교 재학/졸업", "대학원 재학/졸업"])
-    demo_job = st.text_input("현재 직업을 입력해 주세요 (예: 대학생, 회사원 등)")
-
-    # 설문 6개 문항
     scale = ["선택 안 함", "전혀 아니다", "아니다", "보통이다", "그렇다", "매우 그렇다"]
-    q1 = st.radio("이 챗봇은 당신과 말투가 비슷하다고 느꼈나요?", scale)
-    q2 = st.radio("이 챗봇은 믿을 만하다고 느꼈나요?", scale)
-    q3 = st.radio("이 챗봇과의 대화가 즐거웠나요?", scale)
-    q4 = st.radio("이 챗봇은 사람처럼 느껴졌나요?", scale)
-    q5 = st.radio("이 챗봇을 다시 사용하고 싶으신가요?", scale)
-    q6 = st.radio("이 챗봇이 제공한 여행 계획은 도움이 되었나요?", scale)
+
+    # ----------------------------
+    # Mediator 1: Social Presence
+    # ----------------------------
+    sp = [st.radio(q, scale) for q in [
+        "이 챗봇과의 상호작용에서 인간적인 접촉감이 느껴졌다.",
+        "이 챗봇과의 상호작용에서 개인적인 느낌이 들었다.",
+        "이 챗봇과의 상호작용이 사교적이라고 느껴졌다.",
+        "이 챗봇과의 상호작용에서 인간적인 따뜻함이 느껴졌다.",
+        "이 챗봇이 민감하고 배려 있게 반응한다고 느껴졌다."
+    ]]
+
+    # ----------------------------
+    # Mediator 2: Perceived Warmth
+    # ----------------------------
+    pw = [st.radio(q, scale) for q in [
+        "이 챗봇은 따뜻하게 느껴진다.",
+        "이 챗봇은 상냥하게 느껴진다.",
+        "이 챗봇은 친근하게 느껴진다.",
+        "이 챗봇은 진실되게 느껴진다."
+    ]]
+
+    # ----------------------------
+    # Mediator 3: Perceived Competence
+    # ----------------------------
+    pc = [st.radio(q, scale) for q in [
+        "이 챗봇은 서비스 제공 과정에서 유능하게 느껴진다.",
+        "이 챗봇은 서비스 제공 과정에서 숙련되어 있다고 느껴진다.",
+        "이 챗봇은 서비스 제공 과정에서 지능적이라고 느껴진다.",
+        "이 챗봇은 서비스 제공 과정에서 능력이 있다고 느껴진다."
+    ]]
+
+    # ----------------------------
+    # Mediator 4: Trust
+    # ----------------------------
+    tr = [st.radio(q, scale) for q in [
+        "나는 이 챗봇을 신뢰한다.",
+        "나는 이 챗봇이 말하는 내용을 믿는다.",
+        "이 챗봇은 사실에 기반한 진실된 정보를 제공한다고 느낀다."
+    ]]
+
+    # ----------------------------
+    # DV: Continuance Usage Intention
+    # ----------------------------
+    ci = [st.radio(q, scale) for q in [
+        "앞으로도 이 챗봇과 계속 상호작용하고 싶다.",
+        "앞으로도 이 챗봇이 제공하는 서비스를 계속 이용하고 싶다.",
+        "사람 상담보다 이 챗봇을 계속 사용할 의향이 있다.",
+        "미래에도 이 챗봇을 계속 사용할 것이다."
+    ]]
+
+    # 인구통계
+    demo_gender = st.radio("성별:", ["선택 안 함", "남성", "여성", "기타"])
+    demo_age = st.selectbox("연령대:", ["선택 안 함", "10대", "20대", "30대", "40대", "50대 이상"])
+    demo_edu = st.selectbox("학력:", ["선택 안 함", "고졸 이하", "대학 재학·졸업", "대학원 재학·졸업"])
+    demo_job = st.text_input("직업을 입력해 주세요:")
+
     save_chat = st.checkbox("✅ 대화 내용도 함께 저장하겠습니다")
 
     if st.button("제출 및 저장"):
-    # 입력값 유효성 검사
+
         if (
             demo_gender == "선택 안 함" or
             demo_age == "선택 안 함" or
             demo_edu == "선택 안 함" or
-            demo_job.strip() == "" or
-            q1 == "선택 안 함" or
-            q2 == "선택 안 함" or
-            q3 == "선택 안 함" or
-            q4 == "선택 안 함" or
-            q5 == "선택 안 함" or
-            q6 == "선택 안 함"
+            demo_job.strip() == ""
         ):
-            st.warning("⚠️ 모든 항목을 빠짐없이 입력해 주세요. 빈 항목이 있으면 저장되지 않습니다.")
+            st.warning("⚠️ 인구통계 항목을 모두 입력해 주세요.")
+            st.stop()
 
-        else:
-            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            mode_label = "A" if st.session_state.chatbot_mode == "fixed" else "B"
 
-        # 🟡 1. 설문 응답 저장 (survey 시트)
-            survey_row = [
-                timestamp,
-                st.session_state.user_id,
-                mode_label,
-                demo_gender,
-                demo_age,
-                demo_edu,
-                demo_job,
-                q1, q2, q3, q4, q5, q6,
-                st.session_state.style_prompt
-            ]
-            survey_ws.append_row(survey_row, value_input_option="USER_ENTERED")
+        # 응답 체크
+        if any(v == "선택 안 함" for v in (sp + pw + pc + tr + ci)):
+            st.warning("⚠️ 모든 설문 문항에 응답해 주세요.")
+            st.stop()
 
-    # 🟡 2. 대화 내용 저장 (conversation 시트)
-            if save_chat:
-                for msg in st.session_state.messages:
-                    conversation_ws.append_row([
-                        timestamp,
-                        st.session_state.user_id,
-                        msg["role"],
-                        msg["content"]
-                    ], value_input_option="USER_ENTERED")
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        mode_label = "A" if st.session_state.chatbot_mode == "fixed" else "B"
 
-            st.success("✅ 설문과 대화가 각각 Google Sheets에 저장되었습니다!")
+        survey_row = [
+            timestamp,
+            st.session_state.user_id,
+            mode_label,
+            demo_gender, demo_age, demo_edu, demo_job,
+            # Moderator
+            *st.session_state.ai_exposure,
+            # Mediators & DV
+            *sp, *pw, *pc, *tr, *ci,
+            st.session_state.style_prompt
+        ]
+        survey_ws.append_row(survey_row, value_input_option="USER_ENTERED")
+
+        if save_chat:
+            for msg in st.session_state.messages:
+                conversation_ws.append_row([
+                    timestamp,
+                    st.session_state.user_id,
+                    msg["role"],
+                    msg["content"]
+                ], value_input_option="USER_ENTERED")
+
+        st.success("✅ 설문과 대화가 성공적으로 저장되었습니다!")
 
