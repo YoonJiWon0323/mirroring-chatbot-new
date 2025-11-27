@@ -110,7 +110,7 @@ if st.session_state.phase == "mode_selection":
 
 # 파트 0.5: Moderator(AI Exposure) 설문
 elif st.session_state.phase == "moderator_survey":
-    st.subheader("AI 사용 경험에 대해 알려주세요 (AI Exposure)")
+    st.subheader("AI 사용 경험")
     scale = ["선택 안 함", "전혀 아니다", "아니다", "보통이다", "그렇다", "매우 그렇다"]
 
     ae = [st.radio(q, scale) for q in [
