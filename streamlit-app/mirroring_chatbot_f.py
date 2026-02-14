@@ -5,7 +5,6 @@ from datetime import datetime
 import time
 import uuid
 import os
-import openai
 import gspread
 import random
 from google.oauth2.service_account import Credentials
@@ -21,7 +20,6 @@ try:
     gc = gspread.authorize(creds)
 
     # ✅ OpenAI API 설정
-    openai.api_key = st.secrets["OPENAI_API_KEY"]
     client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 except Exception as e:
@@ -215,15 +213,16 @@ elif st.session_state.phase == "conversation":
             else INFORMAL_PROMPT
         )
 
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-4o",
             messages=[
-                {"role":"system","content":system_prompt},
+                {"role": "system", "content": system_prompt},
                 *st.session_state.messages[-8:]
             ]
         )
-
+        
         bot_reply = response.choices[0].message.content
+
         st.session_state.messages.append({"role":"assistant","content":bot_reply})
         st.rerun()
 
