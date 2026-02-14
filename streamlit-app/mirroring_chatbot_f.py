@@ -170,8 +170,8 @@ def get_loss_scenario():
 # 1단계 시작 화면
 # --------------------------------------------------
 if st.session_state.phase == "start":
-    st.title("여행 상담 실험")
-    if st.button("실험 시작"):
+    st.title("여행 관련 상담")
+    if st.button("시작"):
         st.session_state.phase = "conversation"
         st.session_state.start_time = time.time()
         st.rerun()
