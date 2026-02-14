@@ -7,6 +7,7 @@ import uuid
 import os
 import openai
 import gspread
+import random
 from google.oauth2.service_account import Credentials
 
 # ✅ 1️⃣ 페이지 설정 먼저
