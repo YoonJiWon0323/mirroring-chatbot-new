@@ -228,6 +228,39 @@ SCRIPT = {
 "선택 결과에 따라 다음 절차 안내할게."
 ]
 }
+
+def check_step_completion(user_input, step_index, scenario):
+
+    if scenario == "recommend":
+
+        # 1단계: 조건 제시
+        if step_index == 0:
+            keywords = ["예산", "일", "박", "원", "만원"]
+            return any(k in user_input for k in keywords)
+
+        # 2단계: 옵션 검토
+        elif step_index == 1:
+            return len(user_input.strip()) > 5
+
+        # 3단계: 최종 선택
+        elif step_index == 2:
+            return any(k in user_input for k in ["선택", "결정", "할게", "이걸로"])
+
+    elif scenario == "refund":
+
+        # 1단계: 취소 사유
+        if step_index == 0:
+            return len(user_input.strip()) > 10
+
+        # 2단계: 규정 질문
+        elif step_index == 1:
+            return "?" in user_input or "가능" in user_input
+
+        # 3단계: 심사 요청
+        elif step_index == 2:
+            return any(k in user_input for k in ["요청", "진행", "심사"])
+
+    return False
     
 # ---------------- 질문 감지 ----------------
 def is_question(text):
@@ -235,37 +268,41 @@ def is_question(text):
     return any(k in text for k in keywords)
 
 
-def get_system_prompt():
+def get_system_prompt(current_step):
 
     if st.session_state.scenario == "refund":
         return f"""
 당신은 여행 상품 환불 심사 시스템입니다.
 
-중요:
-- 정해진 단계(script)에 따라 진행해야 합니다.
+[중요 규칙]
+- 반드시 아래 현재 단계 안내에 따라 행동하십시오.
 - 새로운 질문을 임의로 만들지 마십시오.
-- 이미 제시된 정보를 반복해서 묻지 마십시오.
-- 현재 단계에서 필요한 반응만 하십시오.
-- 상담을 확장하지 마십시오.
-- 단계가 끝나면 다음 단계로 이동하십시오.
+- 이미 제공된 정보를 다시 묻지 마십시오.
+- 자유 상담처럼 행동하지 마십시오.
+- 현재 단계에 필요한 반응만 하십시오.
+- 응답은 1~2문장으로 간결하게 하십시오.
+
+[현재 단계]
+{current_step}
 
 항상 {st.session_state.tone} 말투를 유지하십시오.
-간결하게 답하십시오.
 """
     else:
         return f"""
 당신은 여행 상품 추천 상담 시스템입니다.
 
-중요:
-- 정해진 단계(script)에 따라 진행해야 합니다.
+[중요 규칙]
+- 반드시 아래 현재 단계 안내에 따라 행동하십시오.
 - 새로운 질문을 임의로 만들지 마십시오.
-- 이미 제시된 정보를 반복해서 묻지 마십시오.
+- 이미 제공된 정보를 다시 묻지 마십시오.
 - 자유 상담처럼 행동하지 마십시오.
-- 현재 단계에서 요구된 정보만 다루십시오.
-- 단계가 끝나면 다음 단계로 이동하십시오.
+- 현재 단계에 필요한 반응만 하십시오.
+- 응답은 1~2문장으로 간결하게 하십시오.
+
+[현재 단계]
+{current_step}
 
 항상 {st.session_state.tone} 말투를 유지하십시오.
-간결하게 답하십시오.
 """
     
 # ==================================================
@@ -327,7 +364,7 @@ elif st.session_state.phase == "conversation":
     script = SCRIPT[key]
     current_step = script[st.session_state.step_index]
 
-    # 첫 안내 메시지 (한 번만 추가)
+    # 첫 안내 메시지
     if st.session_state.step_index == 0 and len(st.session_state.chat_log) == 0:
         st.session_state.chat_log.append(("assistant", current_step))
         st.chat_message("assistant").write(current_step)
@@ -335,28 +372,46 @@ elif st.session_state.phase == "conversation":
     user_input = st.chat_input("입력하세요")
 
     if user_input:
+
+        # 1️⃣ 사용자 메시지 저장
         st.session_state.chat_log.append(("user", user_input))
 
-        system_prompt = get_system_prompt()
+        # 2️⃣ GPT 호출
+        system_prompt = get_system_prompt(current_step)
 
         response = client.chat.completions.create(
             model="gpt-4o",
             temperature=0.3,
             messages=[
                 {"role": "system", "content": system_prompt},
-                {"role": "assistant", "content": current_step},
                 {"role": "user", "content": user_input}
             ]
         )
 
         reply = response.choices[0].message.content
+
+        # 3️⃣ GPT 응답 저장
         st.session_state.chat_log.append(("assistant", reply))
 
-        st.session_state.step_index += 1
+        # 4️⃣ 단계 완료 여부 확인
+       if check_step_completion(
+           user_input,
+           st.session_state.step_index,
+           st.session_state.scenario
+       ):
+           st.session_state.step_index += 1
+           
+           if st.session_state.step_index >= len(script):
+               st.session_state.phase = "consent"
+           else:
+               # 🔥 다음 단계 안내 추가
+               next_step = script[st.session_state.step_index]
+               st.session_state.chat_log.append(("assistant", next_step))
+        else:
+            # 조건 미충족 → 같은 단계 유지 + 현재 단계 안내 다시 출력
+            st.session_state.chat_log.append(("assistant", current_step))
 
-        if st.session_state.step_index >= len(script):
-            st.session_state.phase = "consent"
-
+        # 5️⃣ 화면 갱신
         st.rerun()
         
 # --------------------------------------------------
