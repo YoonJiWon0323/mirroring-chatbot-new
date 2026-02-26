@@ -112,6 +112,9 @@ if "chat_log" not in st.session_state:
 if "last_role" not in st.session_state:
     st.session_state.last_role = None
     
+if "power_condition" not in st.session_state:
+    st.session_state.power_condition = random.choice(["loss", "reward"])
+    
 # --------------------------------------------------
 # 시나리오 안
 # --------------------------------------------------
