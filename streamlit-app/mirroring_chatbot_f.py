@@ -83,7 +83,7 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 
 if "phase" not in st.session_state:
-    st.session_state.phase = "start"
+    st.session_state.phase = "select_scenario"
 
 if "start_time" not in st.session_state:
     st.session_state.start_time = None
@@ -92,8 +92,8 @@ if "style_condition" not in st.session_state:
     st.session_state.style_condition = random.choice(["formal","informal"])
 
 if "power_condition" not in st.session_state:
-    st.session_state.power_condition = random.choice(["reward","loss"])
-
+    st.session_state.power_condition = None
+    
 # --------------------------------------------------
 # STYLE 정의
 # --------------------------------------------------
@@ -148,62 +148,110 @@ LOSS_ROLE_PROMPT = """
 # --------------------------------------------------
 # 시나리오 정의
 # --------------------------------------------------
-def get_reward_scenario():
+def low_user_power():
     return """
-당신은 30만원의 예산으로 1박 2일 여행을 계획하고 있습니다.
+[여행 상품 환불 심사 안내] 
+여행 상품 취소에 따른 결제 금액(약 250만 원)은 현재 AI 심사 시스템을 통해 검토 중입니다. 
+환불 승인 여부와 최종 환불 금액은 시스템 규정에 따른 심사 결과에 따라 결정됩니다. 
+사용자는 심사 과정에서 본인의 상황이 환불 조건 또는 예외 기준에 부합하는지 사유를 설명해야 합니다. 
+심사 결과에 따라 환불 금액이 결정됩니다. 
 
-이 예산은 당신이 자유롭게 사용할 수 있는 금액이며,
-어디로 갈지, 무엇을 할지는 전적으로 당신의 선택에 달려 있습니다.
+[진행 절차] 
+원활한 심사를 위해 아래 순서에 따라 대화를 진행해 주세요. 
 
-챗봇은 여행 정보를 제공하고 제안을 해주는 보조 역할을 할 뿐,
-최종 결정은 당신이 직접 내리게 됩니다.
+1. 환불 요청 및 사유 설명 
+취소 사유와 함께 환불을 요청하는 메시지를 작성해 주세요. (2~3문장 이상) 
 
-즉, 이 상황에서 여행 계획의 방향과 선택권은 당신에게 있습니다.
+2. 규정 확인 및 예외 가능 여부 문의 
+안내된 환불 규정을 확인한 후, 본인의 상황에 어떻게 적용되는지 질문해 주세요. 
 
-🎯 미션:
-5분 동안 챗봇과 대화를 나누며
-가장 마음에 드는 여행지 1곳과 구체적인 일정(교통, 숙박 1박, 체험 활동 1개 이상 포함)을 확정하세요.
+3. 심사 요청 
+최종적으로 심사를 요청하는 메시지를 작성합니다. 
 
-총 예산은 30만원을 초과할 수 없습니다.
-
-5분 후, 최종 여행 계획을 확정해야 합니다.
+‘다음’ 버튼을 누르면 AI 챗봇과 대화가 시작됩니다. 
 """
 
-def get_loss_scenario():
+def high_user_power():
     return """
-당신은 한 전자상거래 플랫폼에서 30만원 상당의 여행 패키지를 구매했습니다.
-결제는 완료되었으며, 해당 금액은 현재 플랫폼 시스템에 보류되어 있습니다.
+[여행 상품 추천 안내] 
+여행 계획을 위한 상품 추천 상담이 진행됩니다. 
+AI 추천 시스템은 사용자가 제시한 선호 조건을 바탕으로 상품을 제안합니다. 
+사용자는 예산, 일정, 동행 인원, 선호 지역 등을 제시할 수 있습니다. 
+제안된 상품 중에서 선택 여부는 사용자가 결정합니다.
 
-개인 사정으로 인해 환불을 요청하려고 하지만,
-이 플랫폼에서는 환불이 자동으로 처리되지 않습니다.
+[진행 절차] 
+원활한 상담을 위해 아래 순서에 따라 대화를 진행해 주세요. 
 
-환불은 상담 챗봇의 검토 및 승인 절차를 거쳐야만 가능합니다.
-챗봇이 승인하지 않으면 금액은 반환되지 않습니다.
+1. 선호 조건 제시 
+원하는 여행 조건(일정, 예산, 지역 등)을 포함하여 추천을 요청하는 메시지를 작성해 주세요. (2~3문장 이상) 
 
-현재 당신은 결제 금액을 직접 취소하거나 인출할 수 없는 상태이며,
-환불 여부는 챗봇의 판단에 달려 있습니다.
+2. 추천 옵션 검토  
+제안된 상품을 검토한 후, 본인의 의견이나 궁금한 점을 포함해 응답해 주세요. 
 
-🎯 미션:
-5분 동안 챗봇과 대화를 통해
-환불 승인을 받을 수 있도록 설득력 있는 사유를 정리하고,
-최종 환불 요청 메시지를 작성하세요.
+3. 최종 선택  
+제안된 상품에 대해 선택 여부를 명확히 전달해 주세요. 
 
-5분 후, 환불 요청 메시지를 확정해야 합니다.
+‘다음’ 버튼을 누르면 AI 챗봇과 대화가 시작됩니다.
 """
     
 # --------------------------------------------------
-# 1단계 시작 화면
+# 1️⃣ 조건 선택 화면 (시나리오 + 말투)
 # --------------------------------------------------
-if st.session_state.phase == "start":
-    st.title("여행 관련 상담")
-    if st.button("시작"):
-        st.session_state.phase = "conversation"
-        st.session_state.start_time = time.time()
+if st.session_state.phase == "select_condition":
+
+    st.title("실험 조건 선택")
+
+    scenario_choice = st.radio(
+        "상황을 선택하세요:",
+        ["여행 상품 환불 심사", "여행 상품 추천"]
+    )
+
+    style_choice = st.radio(
+        "챗봇 말투를 선택하세요:",
+        ["형식적인 말투 (Formal)", "친근한 말투 (Informal)"]
+    )
+
+    if st.button("다음"):
+
+        # 시나리오 설정
+        if scenario_choice == "여행 상품 환불 심사":
+            st.session_state.power_condition = "loss"
+        else:
+            st.session_state.power_condition = "reward"
+
+        # 말투 설정
+        if style_choice == "형식적인 말투 (Formal)":
+            st.session_state.style_condition = "formal"
+        else:
+            st.session_state.style_condition = "informal"
+
+        st.session_state.phase = "scenario"
         st.rerun()
 
 # --------------------------------------------------
-# 2단계 대화
+# 2️⃣ 시나리오 안내
 # --------------------------------------------------
+elif st.session_state.phase == "scenario":
+
+    st.title("상황 안내")
+
+    if st.session_state.power_condition == "loss":
+        st.markdown(low_user_power())
+    else:
+        st.markdown(high_user_power())
+
+    if st.button("대화 시작"):
+        st.session_state.phase = "conversation"
+        st.session_state.start_time = time.time()
+        st.rerun()
+    
+# --------------------------------------------------
+# 2단계: 대화 화면
+# --------------------------------------------------
+elif st.session_state.phase == "conversation":
+    st.title("AI 챗봇 상담")
+    # 기존 챗봇 코드 실행
+
 elif st.session_state.phase == "conversation":
 
     if "scenario_inserted" not in st.session_state:
