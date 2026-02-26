@@ -112,9 +112,6 @@ if "chat_log" not in st.session_state:
 if "last_role" not in st.session_state:
     st.session_state.last_role = None
     
-if "power_condition" not in st.session_state:
-    st.session_state.power_condition = random.choice(["loss", "reward"])
-    
 # --------------------------------------------------
 # 시나리오 안
 # --------------------------------------------------
@@ -248,11 +245,6 @@ elif st.session_state.phase == "scenario":
 
     st.title("상황 안내")
 
-    if st.session_state.power_condition == "loss":
-        st.markdown(low_user_power())
-    else:
-        st.markdown(high_user_power())
-
     if st.button("대화 시작"):
         st.session_state.phase = "conversation"
         st.session_state.start_time = time.time()
@@ -273,22 +265,6 @@ elif st.session_state.phase == "select_tone":
         st.session_state.phase = "scenario"
         st.rerun()
 
-# ==================================================
-# 3️⃣ 시나리오 안내 화면
-# ==================================================
-elif st.session_state.phase == "scenario":
-
-    st.title("상황 안내")
-    st.markdown(scenario_text(st.session_state.scenario))
-
-    if st.button("대화 시작"):
-        st.session_state.step_index = 0
-        st.session_state.chat_log = []
-        st.session_state.last_role = None
-        st.session_state.phase = "conversation"
-        st.rerun()
-
-    
 # ==================================================
 # 3️⃣ 시나리오 안내 화면
 # ==================================================
@@ -350,7 +326,7 @@ elif st.session_state.phase == "conversation":
             st.session_state.last_role = "user"
 
             if st.session_state.step_index >= len(script):
-                st.session_state.phase = "end"
+                st.session_state.phase = "consent"
 
         st.rerun()
 
