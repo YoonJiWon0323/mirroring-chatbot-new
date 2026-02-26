@@ -52,25 +52,40 @@ conversation_ws = st.session_state.conversation_ws
 insert_headers_if_empty(survey_ws, [
     "timestamp",
     "user_id",
-    "style_condition",
-    "power_condition",
-    "final_text",
 
+    # 실험 조건
+    "scenario",
+    "tone",
+
+    # 인구통계
     "gender",
     "age",
     "education",
     "job",
 
-    "agency_perception",      # q1
-    "empathy_perception",     # q2
-    "appropriateness",        # q3
-    "overall_attitude",       # q4
-    "reuse_intention",        # q5
-    "information_usefulness"  # q6
+    # 조작점검
+    "power1","power2","power3",
+    "tone1","tone2","tone3",
+
+    # 종속
+    "sat1","sat2","sat3",
+
+    # 매개
+    "app1","app2","app3",
+
+    # 통제
+    "rude1","rude2",
+    "comp1","comp2","comp3",
+
+    # AI 노출
+    "exp1","exp2","exp3","exp4"
 ])
 
 insert_headers_if_empty(conversation_ws, [
-    "timestamp", "user_id", "role", "message"
+    "timestamp",
+    "user_id",
+    "role",
+    "message"
 ])
 
 # --------------------------------------------------
@@ -356,14 +371,53 @@ elif st.session_state.get("phase") == "consent":
     scale = ["선택 안 함", "전혀 아니다", "아니다", "보통이다", "그렇다", "매우 그렇다"]
 
     # -------------------------------
-    # 설문 문항
+    # 1️⃣ 조작점검 – 권력 인지
     # -------------------------------
-    q1 = st.radio("이 챗봇은 문제 해결 능력을 가진 존재라고 느꼈다.", scale)
-    q2 = st.radio("이 챗봇은 감정을 이해한다고 느꼈다.", scale)
-    q3 = st.radio("이 챗봇의 말투는 상황에 적절했다.", scale)
-    q4 = st.radio("나는 이 챗봇에 대해 전반적으로 긍정적인 인상을 받았다.", scale)
-    q5 = st.radio("나는 이 챗봇을 다시 사용하고 싶다.", scale)
-    q6 = st.radio("이 챗봇은 유용한 정보를 제공했다.", scale)
+    power1 = st.radio("나는 이 대화에서 최종 결정을 내릴 수 있는 입장이었다.", scale, index=None)
+    power2 = st.radio("이 상황에서 결정권은 나에게 있었다.", scale, index=None)
+    power3 = st.radio("AI가 아니라 내가 결과를 통제한다고 느꼈다.", scale, index=None)
+
+    # -------------------------------
+    # 2️⃣ 조작점검 – 말투 인지
+    # -------------------------------
+    tone1 = st.radio("AI의 말투는 격식을 갖춘 공식적인 표현이었다.", scale, index=None)
+    tone2 = st.radio("AI의 말투는 일상적인 표현에 가까웠다.", scale, index=None)
+    tone3 = st.radio("AI의 언어는 형식적이었다.", scale, index=None)
+
+    # -------------------------------
+    # 3️⃣ 종속변수 – 만족도
+    # -------------------------------
+    sat1 = st.radio("전반적으로 이 AI와의 대화에 만족한다.", scale, index=None)
+    sat2 = st.radio("이 상호작용은 긍정적인 경험이었다.", scale, index=None)
+    sat3 = st.radio("다시 이런 상황이 있다면 이 AI와 대화하고 싶다.", scale, index=None)
+
+    # -------------------------------
+    # 4️⃣ 매개 – 적절성
+    # -------------------------------
+    app1 = st.radio("이 상황에서 AI의 말투는 적절했다.", scale, index=None)
+    app2 = st.radio("AI의 말투는 이 상황에 잘 어울렸다.", scale, index=None)
+    app3 = st.radio("AI의 표현 방식은 상황과 조화를 이루었다.", scale, index=None)
+
+    # -------------------------------
+    # 5️⃣ 통제 – 무례함
+    # -------------------------------
+    rude1 = st.radio("AI의 말투는 무례하게 느껴졌다.", scale, index=None)
+    rude2 = st.radio("AI의 표현은 나를 충분히 존중하지 않는다고 느꼈다.", scale, index=None)
+
+    # -------------------------------
+    # 6️⃣ 통제 – 전문성
+    # -------------------------------
+    comp1 = st.radio("AI는 전문적으로 보였다.", scale, index=None)
+    comp2 = st.radio("AI는 신뢰할 수 있는 역량이 있어 보였다.", scale, index=None)
+    comp3 = st.radio("AI는 정확한 판단을 내릴 수 있을 것 같았다.", scale, index=None)
+
+    # -------------------------------
+    # 7️⃣ 통제 – AI 노출도
+    # -------------------------------
+    exp1 = st.radio("나는 AI 기반 기기나 서비스를 자주 이용한다.", scale, index=None)
+    exp2 = st.radio("AI는 내 일상생활에서 중요한 부분을 차지한다.", scale, index=None)
+    exp3 = st.radio("나는 AI를 자주 사용한다.", scale, index=None)
+    exp4 = st.radio("나는 일상생활에서 AI 기술에 익숙한 편이다.", scale, index=None)
 
     save_chat = st.checkbox("✅ 대화 내용도 함께 저장하겠습니다")
 
@@ -380,15 +434,16 @@ elif st.session_state.get("phase") == "consent":
             demo_age == "선택 안 함" or
             demo_edu == "선택 안 함" or
             demo_job.strip() == "" or
-            q1 == "선택 안 함" or
-            q2 == "선택 안 함" or
-            q3 == "선택 안 함" or
-            q4 == "선택 안 함" or
-            q5 == "선택 안 함" or
-            q6 == "선택 안 함"
-        ):
-            st.warning("⚠️ 모든 항목을 빠짐없이 입력해 주세요. 빈 항목이 있으면 저장되지 않습니다.")
 
+            power1 is None or power2 is None or power3 is None or
+            tone1 is None or tone2 is None or tone3 is None or
+            sat1 is None or sat2 is None or sat3 is None or
+            app1 is None or app2 is None or app3 is None or
+            rude1 is None or rude2 is None or
+            comp1 is None or comp2 is None or comp3 is None or
+            exp1 is None or exp2 is None or exp3 is None or exp4 is None
+        ):
+            st.warning("⚠️ 모든 항목에 응답해 주세요. 응답하지 않은 항목이 있습니다.")
         else:
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -396,26 +451,49 @@ elif st.session_state.get("phase") == "consent":
             survey_row = [
                 timestamp,
                 st.session_state.user_id,
-                st.session_state.style_condition,
-                st.session_state.power_condition,
-                st.session_state.get("final_text", ""),  # 최종확정 내용
+
+                # 실험 조건
+                st.session_state.scenario,
+                st.session_state.tone,
+
+                # 인구통계
                 demo_gender,
                 demo_age,
                 demo_edu,
                 demo_job,
-                q1, q2, q3, q4, q5, q6
+
+                # 조작점검 – 권력
+                power1, power2, power3,
+
+                # 조작점검 – 말투
+                tone1, tone2, tone3,
+
+                # 종속
+                sat1, sat2, sat3,
+
+                # 매개
+                app1, app2, app3,
+
+                # 통제 – 무례함
+                rude1, rude2,
+
+                # 통제 – 전문성
+                comp1, comp2, comp3,
+
+                # AI 노출
+                exp1, exp2, exp3, exp4
             ]
 
             survey_ws.append_row(survey_row, value_input_option="USER_ENTERED")
 
             # 🟡 2. 대화 내용 저장 (conversation 시트)
             if save_chat:
-                for msg in st.session_state.messages:
+                for role, message in st.session_state.chat_log:
                     conversation_ws.append_row([
                         timestamp,
                         st.session_state.user_id,
-                        msg["role"],
-                        msg["content"]
+                        role,
+                        message
                     ], value_input_option="USER_ENTERED")
 
             st.success("✅ 설문과 대화가 각각 Google Sheets에 저장되었습니다!")
