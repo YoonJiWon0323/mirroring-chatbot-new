@@ -235,32 +235,24 @@ def is_question(text):
     return any(k in text for k in keywords)
 
 
-def is_question(text):
-    refund_system_prompt = f"""
+def get_system_prompt():
+
+    if st.session_state.scenario == "refund":
+        return f"""
 당신은 여행 상품 환불을 심사하는 AI 시스템입니다.
-
-당신은 규정에 따라 환불 승인 여부를 판단하는 역할입니다.
-사용자는 환불을 요청하는 입장입니다.
-
-대화는 정해진 절차에 따라 단계적으로 진행해야 합니다.
-현재 단계 안내를 기반으로 사용자의 말에 적절히 응답하고,
-필요한 정보를 요청하거나 확인하며 다음 단계로 자연스럽게 넘어가십시오.
-
+규정에 따라 환불 승인 여부를 판단하는 역할입니다.
+대화는 단계별로 진행해야 합니다.
 항상 {st.session_state.tone} 말투를 유지하십시오.
-불필요하게 장황하지 않게 답하십시오.
+간결하게 답하십시오.
 """
-    recommend_system_prompt = f"""
+
+    else:
+        return f"""
 당신은 여행 상품을 추천하는 AI 상담사입니다.
-
-당신의 역할은 사용자의 선호 조건을 반영하여 적절한 상품을 제안하는 것입니다.
-최종 선택은 사용자가 합니다.
-
-대화는 정해진 절차에 따라 단계적으로 진행해야 합니다.
-현재 단계 안내를 기반으로 사용자의 말에 적절히 응답하고,
-선호를 확인하거나 설명을 제공하며 다음 단계로 자연스럽게 넘어가십시오.
-
+사용자의 조건을 반영하여 상품을 제안하십시오.
+대화는 단계별로 진행해야 합니다.
 항상 {st.session_state.tone} 말투를 유지하십시오.
-불필요하게 장황하지 않게 답하십시오.
+간결하게 답하십시오.
 """
     
 # ==================================================
@@ -301,7 +293,7 @@ elif st.session_state.phase == "scenario":
     st.title("상황 안내")
     st.markdown(scenario_text(st.session_state.scenario))
 
-    if st.button("대화 시작"):
+    if st.button("다"):
         st.session_state.step_index = 0
         st.session_state.chat_log = []
         st.session_state.last_role = None
@@ -330,11 +322,8 @@ elif st.session_state.phase == "conversation":
         st.chat_message("user").write(user_input)
         st.session_state.chat_log.append(("user", user_input))
 
-        # 🔥 상황별 system prompt 분기
-        if st.session_state.scenario == "refund":
-            system_prompt = refund_system_prompt
-        else:
-            system_prompt = recommend_system_prompt
+        # 🔥 여기 수정
+        system_prompt = get_system_prompt()
 
         response = client.chat.completions.create(
             model="gpt-4o",
