@@ -113,7 +113,7 @@ if "last_role" not in st.session_state:
     st.session_state.last_role = None
     
 # --------------------------------------------------
-# 시나리오 안
+# 시나리오 안내
 # --------------------------------------------------
 def scenario_text(scenario):
     if scenario == "refund":
@@ -138,7 +138,7 @@ def scenario_text(scenario):
 
 ‘다음’ 버튼을 누르면 AI 챗봇과 대화가 시작됩니다. 
 """
-
+        
     else:
         return """
 [여행 상품 추천 안내] 
@@ -236,18 +236,6 @@ if st.session_state.phase == "select_scenario":
     if st.button("다음"):
         st.session_state.scenario = "refund" if scenario == "여행 상품 환불 심사" else "recommend"
         st.session_state.phase = "select_tone"
-        st.rerun()
-
-# --------------------------------------------------
-# 2️⃣ 시나리오 안내
-# --------------------------------------------------
-elif st.session_state.phase == "scenario":
-
-    st.title("상황 안내")
-
-    if st.button("대화 시작"):
-        st.session_state.phase = "conversation"
-        st.session_state.start_time = time.time()
         st.rerun()
 
 # ==================================================
