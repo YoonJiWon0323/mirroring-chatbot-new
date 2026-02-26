@@ -293,7 +293,7 @@ elif st.session_state.phase == "scenario":
     st.title("상황 안내")
     st.markdown(scenario_text(st.session_state.scenario))
 
-    if st.button("다"):
+    if st.button("다음"):
         st.session_state.step_index = 0
         st.session_state.chat_log = []
         st.session_state.last_role = None
@@ -306,23 +306,24 @@ elif st.session_state.phase == "scenario":
 # ==================================================
 elif st.session_state.phase == "conversation":
 
+    # 🔥 기존 대화 출력
+    for role, message in st.session_state.chat_log:
+        st.chat_message(role).write(message)
+
     key = f"{st.session_state.scenario}_{st.session_state.tone}"
     script = SCRIPT[key]
     current_step = script[st.session_state.step_index]
 
-    if st.session_state.last_role != "assistant":
-        st.chat_message("assistant").write(current_step)
+    # 첫 안내 메시지 (한 번만 추가)
+    if st.session_state.step_index == 0 and len(st.session_state.chat_log) == 0:
         st.session_state.chat_log.append(("assistant", current_step))
-        st.session_state.last_role = "assistant"
+        st.chat_message("assistant").write(current_step)
 
     user_input = st.chat_input("입력하세요")
 
     if user_input:
-
-        st.chat_message("user").write(user_input)
         st.session_state.chat_log.append(("user", user_input))
 
-        # 🔥 여기 수정
         system_prompt = get_system_prompt()
 
         response = client.chat.completions.create(
@@ -336,18 +337,14 @@ elif st.session_state.phase == "conversation":
         )
 
         reply = response.choices[0].message.content
-
-        st.chat_message("assistant").write(reply)
         st.session_state.chat_log.append(("assistant", reply))
 
         st.session_state.step_index += 1
-        st.session_state.last_role = "assistant"
 
         if st.session_state.step_index >= len(script):
             st.session_state.phase = "consent"
 
         st.rerun()
-        
         
 # --------------------------------------------------
 # 파트 4: 설문 + Google Sheets 저장
