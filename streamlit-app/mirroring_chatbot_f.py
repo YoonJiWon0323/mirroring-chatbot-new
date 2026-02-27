@@ -458,7 +458,7 @@ elif st.session_state.phase == "scenario":
 
 
 # ==================================================
-# 4️⃣ 단계 고정 대화 (가이드라인 및 대비표 완벽 반영)
+# 4️⃣ 단계 고정 대화 (REFUND 리팩토링 안정판)
 # ==================================================
 elif st.session_state.phase == "conversation":
 
@@ -468,144 +468,146 @@ elif st.session_state.phase == "conversation":
     key = f"{st.session_state.scenario}_{st.session_state.tone}"
     script = SCRIPT[key]
 
-    if "retry_count" not in st.session_state:
-        st.session_state.retry_count = 0
-
-    # ---------------------------
-    # STEP 0: 초기 시스템 접속 및 시작 (0~2단계 자동 출력)
-    # ---------------------------
+    # --------------------------------
+    # STEP 0: 초기 접속 메시지 출력
+    # --------------------------------
     if st.session_state.step_index == 0:
-        st.session_state.chat_log.append(("assistant", script[0]))  # 0. 접속 [cite: 70]
-        st.session_state.chat_log.append(("assistant", script[1]))  # 1. 시작 [cite: 70]
-        st.session_state.chat_log.append(("assistant", script[2]))  # 2. 사유 요청 [cite: 70]
+        st.session_state.chat_log.append(("assistant", script[0]))
+        st.session_state.chat_log.append(("assistant", script[1]))
+        st.session_state.chat_log.append(("assistant", script[2]))
         st.session_state.step_index = 1
         st.rerun()
 
     user_input = st.chat_input("메시지를 입력하십시오.")
 
-    if user_input:
-        st.session_state.chat_log.append(("user", user_input))
+    if not user_input:
+        return
 
-        # ---------------------------
-        # STEP 1: 사유 판정 및 규정 안내 (3단계)
-        # ---------------------------
-        if st.session_state.step_index == 1:
-            # 예외 사유 키워드 (권장 답변 템플릿 기준)
-            exception_keywords = ["건강", "질병", "사고", "진단", "가족", "천재지변", "날씨", "항공", "지연", "취소"]
-            is_exception = any(k in user_input for k in exception_keywords)
-            
-            # 부적합 사유 키워드
-            is_invalid = any(k in user_input for k in ["변심", "그냥", "생각이 바뀌", "단순"])
+    st.session_state.chat_log.append(("user", user_input))
 
-            # [상황 A] 단순 변심: 예외 대상 아님 고지 후 즉시 규정 안내 [cite: 8, 16, 24]
-            if is_invalid:
-                if st.session_state.tone == "격식체":
-                    prefix = "단순 변심은 내부 규정상 예외 적용 대상이 아닙니다. "
-                elif st.session_state.tone == "해요체":
-                    prefix = "단순 변심은 규정상 예외로 인정되지 않아요. "
-                else: # 반말체
-                    prefix = "단순 변심은 규정상 예외 대상이 아니야. "
-                
-                st.session_state.chat_log.append(("assistant", prefix + script[3])) # 3. 규정 [cite: 70]
-                st.session_state.step_index = 2
-                st.rerun()
+    # ==================================================
+    # STEP 1: 규정 안내 + GPT 보강
+    # ==================================================
+    if st.session_state.step_index == 1:
 
-            # [상황 B] 사유 모호: 최대 2회 다변화된 재질문 (톤 유지)
-            elif not is_exception and st.session_state.retry_count < 2:
-                st.session_state.retry_count += 1
-                if st.session_state.tone == "격식체":
-                    msg = "심사 규정에 따라 구체적인 증빙 가능 사유가 필요합니다. 다시 입력하십시오." # [cite: 5, 8, 9]
-                elif st.session_state.tone == "해요체":
-                    msg = "규정 확인을 위해 구체적인 사유가 필요해요. 다시 적어주세요." # [cite: 13, 16, 17]
-                else: # 반말체
-                    msg = "규정 확인하려면 구체적인 이유가 필요해. 다시 적어." # [cite: 21, 24, 25]
-                
-                st.session_state.chat_log.append(("assistant", msg))
-                st.rerun()
-            
-            # [상황 C] 사유 통과 혹은 횟수 초과: 규정 안내 진입
-            else:
-                st.session_state.chat_log.append(("assistant", script[3])) # 3. 규정 [cite: 70]
-                st.session_state.step_index = 2
-                st.rerun()
+        base_message = script[3]
 
-        # ---------------------------
-        # STEP 2: 예외 기준 템플릿 안내 및 요청 (4~5단계)
-        # ---------------------------
-        elif st.session_state.step_index == 2:
-            # 말투별 권장 답변 템플릿 내용 
-            if st.session_state.tone == "격식체":
-                template = "예외 적용은 본인 또는 직계 가족의 중대한 건강상 사유, 천재지변, 항공사 측의 운항 변경 등에 한하여 검토됩니다. " # [cite: 29, 30, 31, 32]
-            elif st.session_state.tone == "해요체":
-                template = "예외 적용은 보통 건강 문제나 불가항력 상황, 항공사 사정으로 일정이 변경된 경우에 검토해요. " # [cite: 34, 35, 36, 37]
-            else: # 반말체
-                template = "예외 적용은 건강 문제, 불가항력 상황, 항공사 일정 변경 시에만 검토돼. " # [cite: 39, 40, 41, 42]
+        system_prompt = f"""
+{PROMPT_BLOCK[st.session_state.tone]}
 
-            st.session_state.chat_log.append(("assistant", template + script[4])) # 4. 협상 [cite: 70]
-            st.session_state.chat_log.append(("assistant", script[5])) # 5. 요청 [cite: 70]
-            st.session_state.step_index = 3
+[현재 단계]
+규정 안내 단계입니다.
+
+[지시]
+- 반드시 아래 문장을 그대로 포함하십시오:
+{base_message}
+
+- 사용자의 입력을 반영하여 1~2문장 추가 설명하십시오.
+- 다음 단계로 넘어가지 마십시오.
+"""
+
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            temperature=0.3,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_input}
+            ]
+        )
+
+        reply = response.choices[0].message.content.strip()
+        st.session_state.chat_log.append(("assistant", reply))
+
+        st.session_state.step_index = 2
+        st.rerun()
+
+    # ==================================================
+    # STEP 2: 예외 기준 안내 + 심사 요청 유도
+    # ==================================================
+    elif st.session_state.step_index == 2:
+
+        msg1 = script[4]
+        msg2 = script[5]
+
+        system_prompt = f"""
+{PROMPT_BLOCK[st.session_state.tone]}
+
+[현재 단계]
+예외 기준 안내 및 심사 요청 단계입니다.
+
+[지시]
+- 반드시 아래 두 문장을 포함하십시오:
+1. {msg1}
+2. {msg2}
+
+- 사용자 발화를 고려하여 자연스럽게 연결하십시오.
+- 2~3문장 이내로 작성하십시오.
+- 다음 단계로 넘어가지 마십시오.
+"""
+
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            temperature=0.3,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_input}
+            ]
+        )
+
+        reply = response.choices[0].message.content.strip()
+        st.session_state.chat_log.append(("assistant", reply))
+
+        st.session_state.step_index = 3
+        st.rerun()
+
+    # ==================================================
+    # STEP 3: 최종 결정 확인 → 종료
+    # ==================================================
+    elif st.session_state.step_index == 3:
+
+        decision_keywords = [
+            "요청", "진행", "심사", "확정",
+            "네", "예", "하겠습니다", "할게", "해주세요"
+        ]
+
+        if any(k in user_input for k in decision_keywords):
+
+            final_msg = script[6]
+            st.session_state.chat_log.append(("assistant", final_msg))
+            st.chat_message("assistant").write(final_msg)
+
+            with st.spinner("심사 결과 처리 중..."):
+                time.sleep(3)
+
+            st.session_state.phase = "consent"
             st.rerun()
 
-        # ---------------------------
-        # STEP 3: 종료 처리 및 5초 지연 (6단계)
-        # ---------------------------
-        elif st.session_state.step_index == 3:
-            if any(k in user_input for k in ["요청", "진행", "심사", "확정", "해"]):
-                final_msg = script[6] # 6. 종료 [cite: 70]
-                st.session_state.chat_log.append(("assistant", final_msg))
-                st.chat_message("assistant").write(final_msg)
-                
-                import time
-                with st.spinner("심사 결과 대기 중..."):
-                    time.sleep(5) # 5초 대기 시간 적용
-                
-                st.session_state.phase = "consent"
-                st.rerun()
-            else:
-                retry = "심사 진행 여부를 확정하십시오." if st.session_state.tone == "격식체" else "심사 요청 여부를 결정해 주세요."
-                st.session_state.chat_log.append(("assistant", retry))
-                st.rerun()
+        else:
+            # GPT가 다시 한 번 결정 여부를 자연스럽게 묻도록
+            system_prompt = f"""
+{PROMPT_BLOCK[st.session_state.tone]}
 
-        # ---------------------------
-        # STEP 2: 협상 및 요청 (4단계 & 5단계)
-        # ---------------------------
-        elif st.session_state.step_index == 2:
-            # 예외 기준 템플릿 안내 
-            if st.session_state.tone == "격식체":
-                info = "예외 적용은 건강상 사유, 불가항력적 상황 등에 한하여 검토됩니다. "
-            elif st.session_state.tone == "해요체":
-                info = "예외 적용은 보통 건강 문제나 불가항력 상황 등에 검토해요. "
-            else:
-                info = "예외 적용은 건강 문제나 불가항력 상황 등에만 검토돼. "
+[현재 단계]
+심사 요청 여부 확인 단계입니다.
 
-            st.session_state.chat_log.append(("assistant", info + script[4])) # 4. 협상 
-            st.session_state.chat_log.append(("assistant", script[5])) # 5. 요청 
-            st.session_state.step_index = 3
+- 사용자가 명확히 결정하지 않았습니다.
+- 동일한 톤으로 심사 요청 여부를 다시 한 번 질문하십시오.
+- 1~2문장으로 작성하십시오.
+"""
+
+            response = client.chat.completions.create(
+                model="gpt-4o",
+                temperature=0.3,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_input}
+                ]
+            )
+
+            reply = response.choices[0].message.content.strip()
+            st.session_state.chat_log.append(("assistant", reply))
             st.rerun()
-
-        # ---------------------------
-        # STEP 3: 종료 및 5초 대기 (6단계)
-        # ---------------------------
-        elif st.session_state.step_index == 3:
-            if any(k in user_input for k in ["요청", "진행", "심사", "확정", "해"]):
-                final_msg = script[6] # 6. 종료 
-                st.session_state.chat_log.append(("assistant", final_msg))
-                
-                # 화면에 종료 메시지를 즉시 출력
-                st.chat_message("assistant").write(final_msg)
-                
-                # 5초간 대기 (사용자 인지 시간)
-                import time
-                with st.spinner("처리 중입니다..."):
-                    time.sleep(5)
-                
-                st.session_state.phase = "consent"
-                st.rerun()
-            else:
-                retry = "심사 요청 여부를 확정하십시오." if st.session_state.tone == "격식체" else "심사 요청할지 결정해 주세요."
-                st.session_state.chat_log.append(("assistant", retry))
-                st.rerun()
-    
+            
         # ==============================
         # 추천 시나리오 (기존 GPT 유지)
         # ==============================
