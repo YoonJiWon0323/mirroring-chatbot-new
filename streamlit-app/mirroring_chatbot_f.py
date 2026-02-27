@@ -551,12 +551,14 @@ elif st.session_state.phase == "conversation":
                 st.rerun()
 
     # ==================================================
-    # 🔵 RECOMMEND 시나리오 (기존 유지)
+    # 🔵 RECOMMEND 시나리오 (0-1 묶음 + 종료 5초)
     # ==================================================
     else:
 
+        # STEP 0-1: 접속 + 시작 안내 (한 번에 출력)
         if st.session_state.step_index == 0:
-            st.session_state.chat_log.append(("assistant", script[0]))
+            st.session_state.chat_log.append(("assistant", script[0]))  # 접속
+            st.session_state.chat_log.append(("assistant", script[1]))  # 시작 안내
             st.session_state.step_index = 1
             st.rerun()
 
@@ -566,22 +568,47 @@ elif st.session_state.phase == "conversation":
 
         st.session_state.chat_log.append(("user", user_input))
 
-        system_prompt = build_system_prompt(script[st.session_state.step_index])
+        # ==================================================
+        # STEP 2: 조건 제시 요청
+        # ==================================================
+        if st.session_state.step_index == 1:
 
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            temperature=0.3,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_input}
-            ]
-        )
+            st.session_state.chat_log.append(("assistant", script[2]))
+            st.session_state.step_index = 2
+            st.rerun()
 
-        reply = response.choices[0].message.content.strip()
-        st.session_state.chat_log.append(("assistant", reply))
+        # ==================================================
+        # STEP 3: 옵션 검토
+        # ==================================================
+        elif st.session_state.step_index == 2:
 
-        st.session_state.step_index += 1
-        st.rerun()
+            st.session_state.chat_log.append(("assistant", script[3]))
+            st.session_state.step_index = 3
+            st.rerun()
+
+        # ==================================================
+        # STEP 4: 결정 단계
+        # ==================================================
+        elif st.session_state.step_index == 3:
+
+            st.session_state.chat_log.append(("assistant", script[4]))
+            st.session_state.step_index = 4
+            st.rerun()
+
+        # ==================================================
+        # STEP 5: 종료 → 5초 후 consent 이동
+        # ==================================================
+        elif st.session_state.step_index == 4:
+
+            final_msg = script[5]
+            st.session_state.chat_log.append(("assistant", final_msg))
+            st.chat_message("assistant").write(final_msg)
+
+            with st.spinner("처리 중..."):
+                time.sleep(5)
+
+            st.session_state.phase = "consent"
+            st.rerun()
         
 # --------------------------------------------------
 # 파트 4: 설문 + Google Sheets 저장
