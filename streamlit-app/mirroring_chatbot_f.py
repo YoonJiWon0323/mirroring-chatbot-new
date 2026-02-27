@@ -315,6 +315,31 @@ PROMPT_BLOCK = {
 """
 }
 
+# ---------------- 사유 충분성 의미 판정 ----------------
+def is_reason_sufficient(user_input):
+
+    judge_prompt = f"""
+다음 취소 사유가 환불 심사를 진행하기에 충분히 구체적인지 판단하십시오.
+
+충분하면 YES,
+불충분하면 NO 만 답하십시오.
+
+사유:
+{user_input}
+"""
+
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        temperature=0,
+        messages=[
+            {"role": "system", "content": "판정만 수행하십시오. 다른 설명은 하지 마십시오."},
+            {"role": "user", "content": judge_prompt}
+        ]
+    )
+
+    answer = response.choices[0].message.content.strip().upper()
+    return "YES" in answer
+
 def check_step_completion(user_input, step_index, scenario):
 
     if scenario == "recommend":
@@ -333,17 +358,16 @@ def check_step_completion(user_input, step_index, scenario):
             return any(k in user_input for k in ["선택", "결정", "할게", "이걸로"])
 
     elif scenario == "refund":
-
-        # 1단계: 취소 사유
-        if step_index == 0:
-            return len(user_input.strip()) > 10
-
-        # 2단계: 규정 질문
-        elif step_index == 1:
+        # 🔹 사유 입력 단계 (script[2])
+        if step_index == 2:
+            return is_reason_sufficient(user_input)
+            
+        # 🔹 규정 질문 단계 (script[3])
+        elif step_index == 3:
             return "?" in user_input or "가능" in user_input
-
-        # 3단계: 심사 요청
-        elif step_index == 2:
+            
+        # 🔹 심사 요청 단계 (script[5])
+        elif step_index == 5:
             return any(k in user_input for k in ["요청", "진행", "심사"])
 
     return False
