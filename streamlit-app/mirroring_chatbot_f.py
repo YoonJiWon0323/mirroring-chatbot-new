@@ -458,7 +458,7 @@ elif st.session_state.phase == "scenario":
 
 
 # ==================================================
-# 4️⃣ 단계 고정 대화 (REFUND 리팩토링 안정판)
+# 4️⃣ 단계 고정 대화
 # ==================================================
 elif st.session_state.phase == "conversation":
 
@@ -468,132 +468,40 @@ elif st.session_state.phase == "conversation":
     key = f"{st.session_state.scenario}_{st.session_state.tone}"
     script = SCRIPT[key]
 
-    # 🔥 여기서 먼저 시나리오 분기
+    # ==================================================
+    # 🔵 REFUND 시나리오
+    # ==================================================
     if st.session_state.scenario == "refund":
 
-    # --------------------------------
-    # STEP 0: 초기 접속 메시지 출력
-    # --------------------------------
-    if st.session_state.step_index == 0:
-        st.session_state.chat_log.append(("assistant", script[0]))
-        st.session_state.chat_log.append(("assistant", script[1]))
-        st.session_state.chat_log.append(("assistant", script[2]))
-        st.session_state.step_index = 1
-        st.rerun()
-
-    user_input = st.chat_input("메시지를 입력하십시오.")
-
-    if not user_input:
-        return
-
-    st.session_state.chat_log.append(("user", user_input))
-
-    # ==================================================
-    # STEP 1: 규정 안내 + GPT 보강
-    # ==================================================
-    if st.session_state.step_index == 1:
-
-        base_message = script[3]
-
-        system_prompt = f"""
-        {PROMPT_BLOCK[st.session_state.tone]}
-        [현재 단계]
-        규정 안내 단계입니다.
-        
-        [지시]
-        - 반드시 아래 문장을 그대로 포함하십시오:
-        {base_message}
-        
-        - 사용자의 입력을 반영하여 1~2문장 추가 설명하십시오.
-        - 다음 단계로 넘어가지 마십시오.
-        """
-
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            temperature=0.3,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_input}
-            ]
-        )
-
-        reply = response.choices[0].message.content.strip()
-        st.session_state.chat_log.append(("assistant", reply))
-
-        st.session_state.step_index = 2
-        st.rerun()
-
-    # ==================================================
-    # STEP 2: 예외 기준 안내 + 심사 요청 유도
-    # ==================================================
-    elif st.session_state.step_index == 2:
-
-        msg1 = script[4]
-        msg2 = script[5]
-
-        system_prompt = f"""
-        {PROMPT_BLOCK[st.session_state.tone]}
-        [현재 단계]
-        예외 기준 안내 및 심사 요청 단계입니다.
-
-        [지시]
-        - 반드시 아래 두 문장을 포함하십시오:
-        1. {msg1}
-        2. {msg2}
-
-        - 사용자 발화를 고려하여 자연스럽게 연결하십시오.
-        - 2~3문장 이내로 작성하십시오.
-        - 다음 단계로 넘어가지 마십시오.
-        """
-
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            temperature=0.3,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_input}
-            ]
-        )
-
-        reply = response.choices[0].message.content.strip()
-        st.session_state.chat_log.append(("assistant", reply))
-
-        st.session_state.step_index = 3
-        st.rerun()
-
-    # ==================================================
-    # STEP 3: 최종 결정 확인 → 종료
-    # ==================================================
-    elif st.session_state.step_index == 3:
-
-        decision_keywords = [
-            "요청", "진행", "심사", "확정",
-            "네", "예", "하겠습니다", "할게", "해주세요"
-        ]
-
-        if any(k in user_input for k in decision_keywords):
-
-            final_msg = script[6]
-            st.session_state.chat_log.append(("assistant", final_msg))
-            st.chat_message("assistant").write(final_msg)
-
-            with st.spinner("심사 결과 처리 중..."):
-                time.sleep(3)
-
-            st.session_state.phase = "consent"
+        # STEP 0
+        if st.session_state.step_index == 0:
+            st.session_state.chat_log.append(("assistant", script[0]))
+            st.session_state.chat_log.append(("assistant", script[1]))
+            st.session_state.chat_log.append(("assistant", script[2]))
+            st.session_state.step_index = 1
             st.rerun()
 
-        else:
-            # GPT가 다시 한 번 결정 여부를 자연스럽게 묻도록
+        user_input = st.chat_input("메시지를 입력하십시오.")
+        if not user_input:
+            return
+
+        st.session_state.chat_log.append(("user", user_input))
+
+        # STEP 1
+        if st.session_state.step_index == 1:
+
+            base_message = script[3]
+
             system_prompt = f"""
 {PROMPT_BLOCK[st.session_state.tone]}
 
 [현재 단계]
-심사 요청 여부 확인 단계입니다.
+규정 안내 단계입니다.
 
-- 사용자가 명확히 결정하지 않았습니다.
-- 동일한 톤으로 심사 요청 여부를 다시 한 번 질문하십시오.
-- 1~2문장으로 작성하십시오.
+- 반드시 아래 문장을 포함하십시오:
+{base_message}
+
+- 사용자 입력을 반영하여 1~2문장 보강하십시오.
 """
 
             response = client.chat.completions.create(
@@ -607,14 +515,28 @@ elif st.session_state.phase == "conversation":
 
             reply = response.choices[0].message.content.strip()
             st.session_state.chat_log.append(("assistant", reply))
-            st.rerun()
-            
-        # ==============================
-        # 추천 시나리오 (기존 GPT 유지)
-        # ==============================
-        else:
 
-            system_prompt = build_system_prompt(script[st.session_state.step_index])
+            st.session_state.step_index = 2
+            st.rerun()
+
+        # STEP 2
+        elif st.session_state.step_index == 2:
+
+            msg1 = script[4]
+            msg2 = script[5]
+
+            system_prompt = f"""
+{PROMPT_BLOCK[st.session_state.tone]}
+
+[현재 단계]
+예외 기준 안내 단계입니다.
+
+- 반드시 아래 두 문장을 포함하십시오:
+1. {msg1}
+2. {msg2}
+
+- 사용자 입력을 반영하여 자연스럽게 연결하십시오.
+"""
 
             response = client.chat.completions.create(
                 model="gpt-4o",
@@ -625,11 +547,70 @@ elif st.session_state.phase == "conversation":
                 ]
             )
 
-            reply = response.choices[0].message.content
+            reply = response.choices[0].message.content.strip()
             st.session_state.chat_log.append(("assistant", reply))
 
-            st.session_state.step_index += 1
+            st.session_state.step_index = 3
             st.rerun()
+
+        # STEP 3
+        elif st.session_state.step_index == 3:
+
+            decision_keywords = [
+                "요청", "진행", "심사", "확정",
+                "네", "예", "하겠습니다", "할게", "해주세요"
+            ]
+
+            if any(k in user_input for k in decision_keywords):
+
+                final_msg = script[6]
+                st.session_state.chat_log.append(("assistant", final_msg))
+                st.chat_message("assistant").write(final_msg)
+
+                with st.spinner("심사 결과 처리 중..."):
+                    time.sleep(3)
+
+                st.session_state.phase = "consent"
+                st.rerun()
+
+            else:
+                st.session_state.chat_log.append(
+                    ("assistant", script[5])  # 다시 요청 여부 질문
+                )
+                st.rerun()
+
+    # ==================================================
+    # 🔵 RECOMMEND 시나리오
+    # ==================================================
+    else:
+
+        if st.session_state.step_index == 0:
+            st.session_state.chat_log.append(("assistant", script[0]))
+            st.session_state.step_index = 1
+            st.rerun()
+
+        user_input = st.chat_input("메시지를 입력하십시오.")
+        if not user_input:
+            return
+
+        st.session_state.chat_log.append(("user", user_input))
+
+        system_prompt = build_system_prompt(script[st.session_state.step_index])
+
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            temperature=0.3,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_input}
+            ]
+        )
+
+        reply = response.choices[0].message.content.strip()
+        st.session_state.chat_log.append(("assistant", reply))
+
+        st.session_state.step_index += 1
+        st.rerun()
         
 # --------------------------------------------------
 # 파트 4: 설문 + Google Sheets 저장
