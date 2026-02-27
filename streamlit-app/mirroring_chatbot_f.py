@@ -366,16 +366,12 @@ def check_step_completion(user_input, step_index, scenario):
             return any(k in user_input for k in ["선택", "결정", "할게", "이걸로"])
 
     elif scenario == "refund":
-        # 🔹 사유 입력 단계 (script[2])
-        if step_index == 2:
-            return is_reason_sufficient(user_input)
-            
-        # 🔹 규정 질문 단계 (script[3])
-        elif step_index == 3:
-            return "?" in user_input or "가능" in user_input
-            
-        # 🔹 심사 요청 단계 (script[5])
-        elif step_index == 5:
+        # STEP 1: 사유 입력
+        if step_index == 2:  # 실제 사유 입력 단계
+            return len(user_input.strip()) > 5
+
+        # STEP 2: 심사 요청
+        elif step_index == 4:
             return any(k in user_input for k in ["요청", "진행", "심사"])
 
     return False
@@ -522,6 +518,30 @@ elif st.session_state.phase == "conversation":
         )
 
         reply = response.choices[0].message.content
+
+        # --------------------------------------------------
+        # 🔹 환불 STEP 2: 사유 입력 → 내부 판정 처리
+        # --------------------------------------------------
+        if (
+            st.session_state.scenario == "refund"
+            and st.session_state.step_index == 2
+        ):
+            reason = user_input.lower()
+            
+            exception_keywords = [
+                "건강", "병원", "진단", "공황",
+                "날씨", "태풍", "폭설",
+                "항공", "지연", "취소"
+            ]
+
+        is_exception = any(k in reason for k in exception_keywords)
+
+        if is_exception:
+            reply = "입력하신 사유는 내부 규정에 따른 예외 검토 대상에 해당할 수 있습니다."
+        else:
+            reply = "입력하신 사유는 일반 취소 규정이 적용됩니다."
+
+        # GPT 원래 응답은 무시하고 우리가 덮어씀
 
         # 3️⃣ GPT 응답 저장
         st.session_state.chat_log.append(("assistant", reply))
