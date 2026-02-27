@@ -461,25 +461,36 @@ elif st.session_state.phase == "scenario":
 # ==================================================
 elif st.session_state.phase == "conversation":
 
-    # 기존 대화 출력
+    # 🔹 기존 대화 출력
     for role, message in st.session_state.chat_log:
         st.chat_message(role).write(message)
 
     key = f"{st.session_state.scenario}_{st.session_state.tone}"
     script = SCRIPT[key]
+
+    # 🔹 안전장치: 인덱스 범위 보호
+    if st.session_state.step_index >= len(script):
+        st.session_state.phase = "consent"
+        st.rerun()
+
     current_step = script[st.session_state.step_index]
 
-    # 첫 안내 메시지
-    # 0단계는 안내만 하고 자동으로 1단계로 넘긴다
+    # --------------------------------------------------
+    # 🔹 0–1단계 자동 출력 (공지 블록)
+    # --------------------------------------------------
     if st.session_state.step_index == 0 and len(st.session_state.chat_log) == 0:
+
         # 0단계 + 1단계 동시에 출력
         st.session_state.chat_log.append(("assistant", script[0]))
         st.session_state.chat_log.append(("assistant", script[1]))
-        
-        # 바로 2단계로 이동
+
+        # 2단계로 이동 (사유 입력 단계)
         st.session_state.step_index = 2
         st.rerun()
 
+    # --------------------------------------------------
+    # 🔹 사용자 입력
+    # --------------------------------------------------
     user_input = st.chat_input("입력하세요")
 
     if user_input:
@@ -487,8 +498,12 @@ elif st.session_state.phase == "conversation":
         # 1️⃣ 사용자 메시지 저장
         st.session_state.chat_log.append(("user", user_input))
 
+        # 🔹 최신 단계 다시 가져오기 (중요)
+        current_step = script[st.session_state.step_index]
+
         # 2️⃣ GPT 호출
         system_prompt = build_system_prompt(current_step)
+
         response = client.chat.completions.create(
             model="gpt-4o",
             temperature=0.3,
@@ -503,23 +518,31 @@ elif st.session_state.phase == "conversation":
         # 3️⃣ GPT 응답 저장
         st.session_state.chat_log.append(("assistant", reply))
 
-        # 4️⃣ 단계 완료 여부 확인
-        if check_step_completion(
+        # --------------------------------------------------
+        # 🔹 단계 완료 여부 확인
+        # --------------------------------------------------
+        step_completed = check_step_completion(
             user_input,
             st.session_state.step_index,
             st.session_state.scenario
-        ):
+        )
+
+        if step_completed:
+
+            # 다음 단계로 이동
             st.session_state.step_index += 1
 
+            # 🔹 모든 단계 종료 시 설문 이동
             if st.session_state.step_index >= len(script):
                 st.session_state.phase = "consent"
-            else:
-                next_step = script[st.session_state.step_index]
-                st.session_state.chat_log.append(("assistant", next_step))
+                st.rerun()
 
-        else:
-            # 조건 미충족이면 step 유지 (문장 재출력 X)
-            pass
+            # 🔹 다음 단계 안내 출력
+            next_step = script[st.session_state.step_index]
+            st.session_state.chat_log.append(("assistant", next_step))
+
+        # ❌ 조건 미충족 시 단계 문장 재출력 안 함
+        # (반복 방지)
 
         st.rerun()
         
