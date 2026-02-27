@@ -493,18 +493,17 @@ elif st.session_state.phase == "conversation":
         base_message = script[3]
 
         system_prompt = f"""
-{PROMPT_BLOCK[st.session_state.tone]}
-
-[현재 단계]
-규정 안내 단계입니다.
-
-[지시]
-- 반드시 아래 문장을 그대로 포함하십시오:
-{base_message}
-
-- 사용자의 입력을 반영하여 1~2문장 추가 설명하십시오.
-- 다음 단계로 넘어가지 마십시오.
-"""
+        {PROMPT_BLOCK[st.session_state.tone]}
+        [현재 단계]
+        규정 안내 단계입니다.
+        
+        [지시]
+        - 반드시 아래 문장을 그대로 포함하십시오:
+        {base_message}
+        
+        - 사용자의 입력을 반영하여 1~2문장 추가 설명하십시오.
+        - 다음 단계로 넘어가지 마십시오.
+        """
 
         response = client.chat.completions.create(
             model="gpt-4o",
