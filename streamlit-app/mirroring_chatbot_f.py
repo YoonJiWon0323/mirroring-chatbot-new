@@ -468,6 +468,9 @@ elif st.session_state.phase == "conversation":
     key = f"{st.session_state.scenario}_{st.session_state.tone}"
     script = SCRIPT[key]
 
+    # 🔥 여기서 먼저 시나리오 분기
+    if st.session_state.scenario == "refund":
+
     # --------------------------------
     # STEP 0: 초기 접속 메시지 출력
     # --------------------------------
