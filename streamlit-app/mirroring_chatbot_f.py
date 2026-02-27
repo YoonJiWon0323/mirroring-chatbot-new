@@ -483,7 +483,7 @@ elif st.session_state.phase == "conversation":
 
         user_input = st.chat_input("메시지를 입력하십시오.")
         if not user_input:
-            return
+            st.stop()
 
         st.session_state.chat_log.append(("user", user_input))
 
@@ -574,9 +574,7 @@ elif st.session_state.phase == "conversation":
                 st.rerun()
 
             else:
-                st.session_state.chat_log.append(
-                    ("assistant", script[5])  # 다시 요청 여부 질문
-                )
+                st.session_state.chat_log.append(("assistant", script[5]))
                 st.rerun()
 
     # ==================================================
@@ -591,7 +589,7 @@ elif st.session_state.phase == "conversation":
 
         user_input = st.chat_input("메시지를 입력하십시오.")
         if not user_input:
-            return
+            st.stop()
 
         st.session_state.chat_log.append(("user", user_input))
 
