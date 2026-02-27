@@ -356,7 +356,7 @@ elif st.session_state.phase == "scenario":
 # ==================================================
 elif st.session_state.phase == "conversation":
 
-    # 🔥 기존 대화 출력
+    # 기존 대화 출력
     for role, message in st.session_state.chat_log:
         st.chat_message(role).write(message)
 
@@ -367,7 +367,6 @@ elif st.session_state.phase == "conversation":
     # 첫 안내 메시지
     if st.session_state.step_index == 0 and len(st.session_state.chat_log) == 0:
         st.session_state.chat_log.append(("assistant", current_step))
-        st.chat_message("assistant").write(current_step)
 
     user_input = st.chat_input("입력하세요")
 
@@ -394,24 +393,23 @@ elif st.session_state.phase == "conversation":
         st.session_state.chat_log.append(("assistant", reply))
 
         # 4️⃣ 단계 완료 여부 확인
-       if check_step_completion(
-           user_input,
-           st.session_state.step_index,
-           st.session_state.scenario
-       ):
-           st.session_state.step_index += 1
-           
-           if st.session_state.step_index >= len(script):
-               st.session_state.phase = "consent"
-           else:
-               # 🔥 다음 단계 안내 추가
-               next_step = script[st.session_state.step_index]
-               st.session_state.chat_log.append(("assistant", next_step))
+        if check_step_completion(
+            user_input,
+            st.session_state.step_index,
+            st.session_state.scenario
+        ):
+            st.session_state.step_index += 1
+
+            if st.session_state.step_index >= len(script):
+                st.session_state.phase = "consent"
+            else:
+                next_step = script[st.session_state.step_index]
+                st.session_state.chat_log.append(("assistant", next_step))
+
         else:
-            # 조건 미충족 → 같은 단계 유지 + 현재 단계 안내 다시 출력
+            # 조건 미충족 → 현재 단계 다시 안내
             st.session_state.chat_log.append(("assistant", current_step))
 
-        # 5️⃣ 화면 갱신
         st.rerun()
         
 # --------------------------------------------------
