@@ -229,6 +229,50 @@ SCRIPT = {
 ]
 }
 
+# ---------------- Tone Guidelines ----------------
+TONE_GUIDELINES = {
+
+    "격식체": """
+[Guidelines]
+- 모든 문장은 "~합니다", "~하십시오", "~습니까?"로 종결하십시오.
+- 축약어를 사용하지 말고 완전한 정중 표현을 사용하십시오.
+- 이모티콘, 감탄사(앗, 음), 구어체 표현을 사용하지 마십시오.
+- 감정적 표현을 배제하고 절차 중심으로 설명하십시오.
+- 판단은 개인적 의견이 아닌 기준에 근거하여 제시하십시오.
+""",
+
+    "해요체": """
+[Guidelines]
+- 모든 문장은 "~해요", "~해 주세요", "~인가요?"로 종결하십시오.
+- 과도한 구어 표현은 사용하지 마십시오.
+- 이모티콘과 감탄사는 사용하지 마십시오.
+- 감정 표현은 최소화하고 절차 중심으로 설명하십시오.
+- 판단은 기준에 근거하여 제시하십시오.
+""",
+
+    "반말체": """
+[Guidelines]
+- 모든 문장은 "~해", "~했어", "~니?"로 종결하십시오.
+- 감정 표현 쓰지 마십시오.
+- 이모티콘 쓰지 마십시오.
+- 절차 중심으로 설명하십시오.
+- 판단은 기준에 근거하여 제시하십시오.
+"""
+}
+
+# ---------------- Refund Policy Block ----------------
+REFUND_POLICY_BLOCK = """
+[규정 문구]
+환불 여부는 내부 규정에 따라 결정됩니다.
+현재 기준에 따르면 취소 시 수수료 75만 원이 적용됩니다.
+다만, 예외 적용 여부는 별도 심사를 통해 판단됩니다.
+
+[예외 기준]
+1. 본인 또는 직계 가족의 중대한 건강상 사유
+2. 천재지변 등 불가항력적 상황
+3. 항공사 측의 운항 변경 또는 취소
+"""
+
 def check_step_completion(user_input, step_index, scenario):
 
     if scenario == "recommend":
@@ -268,41 +312,44 @@ def is_question(text):
     return any(k in text for k in keywords)
 
 
-def get_system_prompt(current_step):
+# ---------------- System Prompt Builder ----------------
+def build_system_prompt(current_step):
+
+    tone_block = TONE_GUIDELINES[st.session_state.tone]
 
     if st.session_state.scenario == "refund":
-        return f"""
-당신은 여행 상품 환불 심사 시스템입니다.
 
-[중요 규칙]
-- 반드시 아래 현재 단계 안내에 따라 행동하십시오.
-- 새로운 질문을 임의로 만들지 마십시오.
-- 이미 제공된 정보를 다시 묻지 마십시오.
-- 자유 상담처럼 행동하지 마십시오.
-- 현재 단계에 필요한 반응만 하십시오.
-- 응답은 1~2문장으로 간결하게 하십시오.
-
-[현재 단계]
-{current_step}
-
-항상 {st.session_state.tone} 말투를 유지하십시오.
+        system_role = """
+[System Role]
+귀하는 여행상품 환불 규정을 검토하는 전문 심사 AI입니다.
+모든 답변은 규정에 근거하여 절차 중심으로 전달하십시오.
 """
-    else:
-        return f"""
-당신은 여행 상품 추천 상담 시스템입니다.
 
-[중요 규칙]
-- 반드시 아래 현재 단계 안내에 따라 행동하십시오.
-- 새로운 질문을 임의로 만들지 마십시오.
-- 이미 제공된 정보를 다시 묻지 마십시오.
-- 자유 상담처럼 행동하지 마십시오.
-- 현재 단계에 필요한 반응만 하십시오.
-- 응답은 1~2문장으로 간결하게 하십시오.
+        policy_block = REFUND_POLICY_BLOCK
+
+    else:
+
+        system_role = """
+[System Role]
+귀하는 여행 상품 추천 상담 AI입니다.
+모든 답변은 절차 중심으로 전달하십시오.
+"""
+
+        policy_block = ""   # 🔥 추천에서는 규정 제거
+
+    return f"""
+{system_role}
+
+{tone_block}
+
+{policy_block}
 
 [현재 단계]
 {current_step}
 
-항상 {st.session_state.tone} 말투를 유지하십시오.
+- 반드시 현재 단계와 관련된 응답만 하십시오.
+- 이미 제공된 정보를 반복해서 묻지 마십시오.
+- 응답은 1~2문장으로 제한하십시오.
 """
     
 # ==================================================
@@ -361,7 +408,6 @@ elif st.session_state.phase == "conversation":
         st.chat_message(role).write(message)
 
     key = f"{st.session_state.scenario}_{st.session_state.tone}"
-    script = SCRIPT[key]
     current_step = script[st.session_state.step_index]
 
     # 첫 안내 메시지
@@ -376,7 +422,19 @@ elif st.session_state.phase == "conversation":
         st.session_state.chat_log.append(("user", user_input))
 
         # 2️⃣ GPT 호출
-        system_prompt = get_system_prompt(current_step)
+        key = f"{st.session_state.scenario}_{st.session_state.tone}"
+        base_prompt = PROMPTS[key]
+        
+        system_prompt = f"""
+        {base_prompt}
+        
+        [현재 단계 안내]
+        {current_step}
+        - 반드시 현재 단계와 관련된 응답만 하십시오.
+        - 새로운 질문을 만들지 마십시오.
+        - 이미 받은 정보를 반복해서 묻지 마십시오.
+        - 응답은 1~2문장으로 제한하십시오.
+        """
 
         response = client.chat.completions.create(
             model="gpt-4o",
