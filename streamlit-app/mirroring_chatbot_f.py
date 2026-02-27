@@ -458,7 +458,7 @@ elif st.session_state.phase == "scenario":
 
 
 # ==================================================
-# 4️⃣ 단계 고정 대화 (상호작용 및 톤 유지 보완)
+# 4️⃣ 단계 고정 대화 (단계별 순차 진행 및 톤 보완)
 # ==================================================
 elif st.session_state.phase == "conversation":
 
@@ -487,32 +487,35 @@ elif st.session_state.phase == "conversation":
         # STEP 1: 사유 확인 및 기본 수수료 안내
         # ---------------------------
         if st.session_state.step_index == 1:
-            # 1. 사유 접수 멘트 (톤 유지용 추가 발화)
+            # 톤 유지용 추가 발화 (GPT의 보충 설명)
             if st.session_state.tone == "격식체":
-                reply = "접수하신 내용을 바탕으로 규정 적용 여부를 확인하겠습니다. " [cite: 3, 8]
+                # 규정에 근거한 절차 중심 전달 [cite: 3, 8]
+                reply = "접수하신 내용을 바탕으로 규정 적용 여부를 확인하겠습니다. " 
             elif st.session_state.tone == "해요체":
-                reply = "보내주신 사유 확인했어요. 규정에 맞는지 한번 살펴볼게요. " [cite: 11, 16]
+                # 친근하지만 절차 중심 유지 [cite: 11, 16]
+                reply = "보내주신 사유 확인했어요. 규정에 맞는지 한번 살펴볼게요. " 
             else: # 반말체
-                reply = "사유 확인했어. 규정대로 처리되는지 볼게. " [cite: 19, 24]
+                # 감정 배제 및 절차 중심 [cite: 19, 24]
+                reply = "사유 확인했어. 규정대로 처리되는지 볼게. " 
             
-            # 2. 기본 수수료 안내 스크립트 결합
-            st.session_state.chat_log.append(("assistant", reply + script[3])) [cite: 27, 70]
+            # 수수료 안내 결합 [cite: 27]
+            st.session_state.chat_log.append(("assistant", reply + script[3]))
             st.session_state.step_index = 2
             st.rerun()
 
         # ---------------------------
-        # STEP 2: 예외 가능성(협상) 및 심사 의사 확인
+        # STEP 2: 예외 가능성 안내 및 심사 의사 확인
         # ---------------------------
         elif st.session_state.step_index == 2:
-            # 1. 예외 규정 보충 설명 (톤 유지용 추가 발화)
+            # 예외 사유 보충 설명 (권장 답변 템플릿 활용) [cite: 29, 34, 39]
             if st.session_state.tone == "격식체":
-                add_info = "다만, 기상 악화 증빙 서류가 보완된다면 예외 검토의 여지가 있습니다. " [cite: 3, 29, 31]
+                add_info = "다만, 기상 악화 등 불가항력적 사유에 해당한다면 예외 심사가 가능합니다. " [cite: 31, 32]
             elif st.session_state.tone == "해요체":
-                add_info = "날씨 때문이라면 증빙 서류를 내서 예외로 인정받을 수도 있어요. " [cite: 11, 33, 36]
+                add_info = "날씨 같은 불가항력 상황이라면 추가로 검토해볼 수 있어요. " [cite: 36, 37]
             else: # 반말체
-                add_info = "날씨 탓이면 서류 내면 예외로 봐줄 수도 있어. " [cite: 19, 38, 41]
+                add_info = "천재지변 같은 불가항력 상황이면 다시 검토될 수 있어. " [cite: 41, 42]
 
-            # 2. 재심사 가능 안내 + 심사 요청 여부 확정 [cite: 70, 72]
+            # 재심사 가능 안내 + 심사 요청 여부 확정 [cite: 70, 72]
             st.session_state.chat_log.append(("assistant", add_info + script[4]))
             st.session_state.chat_log.append(("assistant", script[5]))
             st.session_state.step_index = 3
@@ -522,16 +525,16 @@ elif st.session_state.phase == "conversation":
         # STEP 3: 최종 심사 승인 및 종료
         # ---------------------------
         elif st.session_state.step_index == 3:
+            # 사용자의 요청 의사 확인 [cite: 68]
             if any(k in user_input for k in ["요청", "진행", "심사", "확정", "해줘", "해요"]):
                 st.session_state.chat_log.append(("assistant", script[6])) # 처리 대기 안내 [cite: 70, 72]
                 st.session_state.phase = "consent"
                 st.rerun()
             else:
-                # 불명확한 답변 시 재확인
+                # 톤에 맞는 재확인 메시지
                 retry = "심사 진행 여부를 명확하게 말씀해 주십시오." if st.session_state.tone == "격식체" else "심사 진행할지 다시 알려주세요."
                 st.session_state.chat_log.append(("assistant", retry))
                 st.rerun()
-
         # ==============================
         # 추천 시나리오 (기존 GPT 유지)
         # ==============================
