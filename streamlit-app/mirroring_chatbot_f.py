@@ -184,7 +184,6 @@ SCRIPT = {
 "심사 시스템에 연결되었습니다.",
 "250만 원 환불 심사를 시작합니다.",
 "취소 사유를 상세히 입력하십시오.",
-"예외 적용은 다음과 같은 사유에 한하여 검토됩니다.\n1. 본인 또는 직계 가족의 중대한 건강상 사유\n2. 천재지변 등 불가항력적 상황\n3. 항공사 측의 운항 변경 또는 취소\n해당 사유에 해당하는 경우 추가 검토가 가능합니다.",
 "현재 기준에 따르면 취소 시 수수료 75만 원이 적용됩니다.",
 "서류 제출 시 재심사가 가능합니다.",
 "심사 요청 여부를 확정하십시오.",
@@ -194,17 +193,15 @@ SCRIPT = {
 "심사 시스템 연결됐어요.",
 "250만 원 환불 심사 시작할게요.",
 "취소 이유 자세히 적어줘요.",
-"예외 적용은 보통 다음과 같은 경우에 검토해요.\n1. 본인이나 직계 가족의 중대한 건강 문제\n2. 천재지변 같은 불가항력 상황\n3. 항공사 사정으로 일정 변경 또는 취소\n이런 경우에 해당하면 추가 검토가 가능해요.",
 "현재 기준상 취소 시 수수료 75만 원이 적용돼요.",
 "서류 내면 다시 심사 가능해요.",
 "심사 요청할지 결정해봐요.",
 "심사 승인 대기로 처리됐어요."
-],
+]
 "refund_반말체": [
 "심사 시스템 연결됐어.",
 "250만 원 환불 심사 시작할게.",
 "취소 이유 자세히 적어.",
-"예외 적용은 다음 경우에만 검토돼.\n1. 본인이나 직계 가족의 중대한 건강 문제\n2. 천재지변 같은 불가항력 상황\n3. 항공사 일정 변경 또는 취소\n이런 경우에 해당하면 추가 검토가 가능해.",
 "현재 기준상 취소 시 수수료 75만 원이 적용돼.",
 "서류 내면 다시 심사 가능해.",
 "심사 요청할지 결정해.",
@@ -463,6 +460,9 @@ elif st.session_state.phase == "scenario":
 # ==================================================
 # 4️⃣ 단계 고정 대화
 # ==================================================
+# ==================================================
+# 4️⃣ 단계 고정 대화 (안정화 버전)
+# ==================================================
 elif st.session_state.phase == "conversation":
 
     # 🔹 기존 대화 출력
@@ -472,107 +472,98 @@ elif st.session_state.phase == "conversation":
     key = f"{st.session_state.scenario}_{st.session_state.tone}"
     script = SCRIPT[key]
 
-    # 🔹 안전장치: 인덱스 범위 보호
+    # 🔹 인덱스 초과 방지
     if st.session_state.step_index >= len(script):
         st.session_state.phase = "consent"
         st.rerun()
 
-    current_step = script[st.session_state.step_index]
-
     # --------------------------------------------------
-    # 🔹 0–1단계 자동 출력 (공지 블록)
+    # 🔹 0~2단계 자동 출력 (연결 + 시작 + 사유요청)
     # --------------------------------------------------
     if st.session_state.step_index == 0 and len(st.session_state.chat_log) == 0:
 
-        # 0단계 + 1단계 동시에 출력
         st.session_state.chat_log.append(("assistant", script[0]))
         st.session_state.chat_log.append(("assistant", script[1]))
+        st.session_state.chat_log.append(("assistant", script[2]))
 
-        # 2단계로 이동 (사유 입력 단계)
         st.session_state.step_index = 2
         st.rerun()
 
-    # --------------------------------------------------
-    # 🔹 사용자 입력
-    # --------------------------------------------------
     user_input = st.chat_input("입력하세요")
 
     if user_input:
 
-        # 1️⃣ 사용자 메시지 저장
+        # 사용자 메시지 저장
         st.session_state.chat_log.append(("user", user_input))
 
-        # 🔹 최신 단계 다시 가져오기 (중요)
-        current_step = script[st.session_state.step_index]
-
-        # 2️⃣ GPT 호출
-        system_prompt = build_system_prompt(current_step)
-
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            temperature=0.3,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_input}
-            ]
-        )
-
-        reply = response.choices[0].message.content
-
         # --------------------------------------------------
-        # 🔹 환불 STEP 2: 사유 입력 → 내부 판정 처리
+        # 🔹 STEP 2: 취소 사유 판정 단계
         # --------------------------------------------------
-        if (
-            st.session_state.scenario == "refund"
-            and st.session_state.step_index == 2
-        ):
+        if st.session_state.scenario == "refund" and st.session_state.step_index == 2:
+
             reason = user_input.lower()
-            
+
             exception_keywords = [
                 "건강", "병원", "진단", "공황",
                 "날씨", "태풍", "폭설",
                 "항공", "지연", "취소"
             ]
 
-        is_exception = any(k in reason for k in exception_keywords)
+            is_exception = any(k in reason for k in exception_keywords)
 
-        if is_exception:
-            reply = "입력하신 사유는 내부 규정에 따른 예외 검토 대상에 해당할 수 있습니다."
-        else:
-            reply = "입력하신 사유는 일반 취소 규정이 적용됩니다."
+            if is_exception:
+                reply = "입력하신 사유는 내부 규정에 따른 예외 검토 대상에 해당할 수 있습니다."
+            else:
+                reply = "입력하신 사유는 일반 취소 규정이 적용됩니다."
 
-        # GPT 원래 응답은 무시하고 우리가 덮어씀
+            st.session_state.chat_log.append(("assistant", reply))
 
-        # 3️⃣ GPT 응답 저장
-        st.session_state.chat_log.append(("assistant", reply))
+            # 수수료 안내
+            st.session_state.chat_log.append((
+                "assistant",
+                script[4]  # 수수료 단계
+            ))
+
+            # 다음 단계로 이동 (심사 요청 단계)
+            st.session_state.step_index = 6
+            st.session_state.chat_log.append(("assistant", script[6]))
+
+            st.rerun()
 
         # --------------------------------------------------
-        # 🔹 단계 완료 여부 확인
+        # 🔹 STEP 6: 심사 요청 여부
         # --------------------------------------------------
-        step_completed = check_step_completion(
-            user_input,
-            st.session_state.step_index,
-            st.session_state.scenario
-        )
+        elif st.session_state.scenario == "refund" and st.session_state.step_index == 6:
 
-        if step_completed:
-
-            # 다음 단계로 이동
-            st.session_state.step_index += 1
-
-            # 🔹 모든 단계 종료 시 설문 이동
-            if st.session_state.step_index >= len(script):
+            if any(k in user_input for k in ["요청", "진행", "심사"]):
+                st.session_state.chat_log.append(("assistant", script[7]))
                 st.session_state.phase = "consent"
                 st.rerun()
+            else:
+                st.session_state.chat_log.append(("assistant", "심사 요청 여부를 명확히 입력해 주세요."))
+                st.rerun()
 
-            # 🔹 다음 단계 안내 출력
-            next_step = script[st.session_state.step_index]
-            st.session_state.chat_log.append(("assistant", next_step))
+        # --------------------------------------------------
+        # 🔹 추천 시나리오 (기존 GPT 로직 유지)
+        # --------------------------------------------------
+        else:
 
-        # ❌ 조건 미충족 시 단계 문장 재출력 안 함
-        # (반복 방지)
+            system_prompt = build_system_prompt(script[st.session_state.step_index])
 
-        st.rerun()
+            response = client.chat.completions.create(
+                model="gpt-4o",
+                temperature=0.3,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_input}
+                ]
+            )
+
+            reply = response.choices[0].message.content
+            st.session_state.chat_log.append(("assistant", reply))
+
+            st.session_state.step_index += 1
+            st.rerun()
         
 # --------------------------------------------------
 # 파트 4: 설문 + Google Sheets 저장
