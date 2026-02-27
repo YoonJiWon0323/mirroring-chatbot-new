@@ -458,10 +458,7 @@ elif st.session_state.phase == "scenario":
 
 
 # ==================================================
-# 4️⃣ 단계 고정 대화
-# ==================================================
-# ==================================================
-# 4️⃣ 단계 고정 대화 (단계별 순차 진행 및 사유 검증 강화)
+# 4️⃣ 단계 고정 대화 (상호작용 및 톤 유지 보완)
 # ==================================================
 elif st.session_state.phase == "conversation":
 
@@ -472,54 +469,67 @@ elif st.session_state.phase == "conversation":
     script = SCRIPT[key]
 
     # ---------------------------
-    # STEP 0: 초기 인사 및 사유 요청 (최초 1회)
+    # STEP 0: 초기 시스템 접속 및 사유 요청
     # ---------------------------
     if st.session_state.step_index == 0:
-        st.session_state.chat_log.append(("assistant", script[0]))  # 접속
-        st.session_state.chat_log.append(("assistant", script[1]))  # 시작
-        st.session_state.chat_log.append(("assistant", script[2]))  # 사유 요청 안내 (상세 입력하십시오)
+        st.session_state.chat_log.append(("assistant", script[0]))  # 접속 [cite: 70, 72]
+        st.session_state.chat_log.append(("assistant", script[1]))  # 시작 [cite: 70, 72]
+        st.session_state.chat_log.append(("assistant", script[2]))  # 사유 입력 요청 [cite: 70, 72]
         st.session_state.step_index = 1
         st.rerun()
 
-    user_input = st.chat_input("메시지를 입력해 주세요.")
+    user_input = st.chat_input("메시지를 입력하세요.")
 
     if user_input:
         st.session_state.chat_log.append(("user", user_input))
 
         # ---------------------------
-        # STEP 1: 사유 구체성 검종 (환불 시나리오 전용)
+        # STEP 1: 사유 확인 및 기본 수수료 안내
         # ---------------------------
-        if st.session_state.scenario == "refund" and st.session_state.step_index == 1:
-            # 글자 수나 키워드로 구체성 판단 (예: 10자 미만이면 다시 물음)
-            if len(user_input.strip()) < 10:
-                fail_msg = "제시하신 사유가 구체적이지 않습니다. 심사를 위해 상세한 취소 사유를 입력해 주십시오."
-                if st.session_state.tone == "해요체": fail_msg = "말씀하신 내용이 조금 부족해요. 상세한 이유를 다시 적어주세요."
-                if st.session_state.tone == "반말체": fail_msg = "내용이 너무 짧아. 자세한 이유를 다시 적어."
-                
-                st.session_state.chat_log.append(("assistant", fail_msg))
-                st.rerun()
-            else:
-                # 사유가 충분하면 다음 단계(수수료 안내)로 이동
-                st.session_state.chat_log.append(("assistant", script[3])) # 수수료 안내
-                st.session_state.chat_log.append(("assistant", script[4])) # 서류 제출 안내
-                st.session_state.chat_log.append(("assistant", script[5])) # 심사 확정 요청
-                st.session_state.step_index = 2
-                st.rerun()
+        if st.session_state.step_index == 1:
+            # 1. 사유 접수 멘트 (톤 유지용 추가 발화)
+            if st.session_state.tone == "격식체":
+                reply = "접수하신 내용을 바탕으로 규정 적용 여부를 확인하겠습니다. " [cite: 3, 8]
+            elif st.session_state.tone == "해요체":
+                reply = "보내주신 사유 확인했어요. 규정에 맞는지 한번 살펴볼게요. " [cite: 11, 16]
+            else: # 반말체
+                reply = "사유 확인했어. 규정대로 처리되는지 볼게. " [cite: 19, 24]
+            
+            # 2. 기본 수수료 안내 스크립트 결합
+            st.session_state.chat_log.append(("assistant", reply + script[3])) [cite: 27, 70]
+            st.session_state.step_index = 2
+            st.rerun()
 
         # ---------------------------
-        # STEP 2: 최종 심사 요청 확인
+        # STEP 2: 예외 가능성(협상) 및 심사 의사 확인
         # ---------------------------
-        elif st.session_state.scenario == "refund" and st.session_state.step_index == 2:
-            if any(k in user_input for k in ["요청", "진행", "심사", "확정", "알았어", "해줘"]):
-                st.session_state.chat_log.append(("assistant", script[6])) # 종료 단계
+        elif st.session_state.step_index == 2:
+            # 1. 예외 규정 보충 설명 (톤 유지용 추가 발화)
+            if st.session_state.tone == "격식체":
+                add_info = "다만, 기상 악화 증빙 서류가 보완된다면 예외 검토의 여지가 있습니다. " [cite: 3, 29, 31]
+            elif st.session_state.tone == "해요체":
+                add_info = "날씨 때문이라면 증빙 서류를 내서 예외로 인정받을 수도 있어요. " [cite: 11, 33, 36]
+            else: # 반말체
+                add_info = "날씨 탓이면 서류 내면 예외로 봐줄 수도 있어. " [cite: 19, 38, 41]
+
+            # 2. 재심사 가능 안내 + 심사 요청 여부 확정 [cite: 70, 72]
+            st.session_state.chat_log.append(("assistant", add_info + script[4]))
+            st.session_state.chat_log.append(("assistant", script[5]))
+            st.session_state.step_index = 3
+            st.rerun()
+
+        # ---------------------------
+        # STEP 3: 최종 심사 승인 및 종료
+        # ---------------------------
+        elif st.session_state.step_index == 3:
+            if any(k in user_input for k in ["요청", "진행", "심사", "확정", "해줘", "해요"]):
+                st.session_state.chat_log.append(("assistant", script[6])) # 처리 대기 안내 [cite: 70, 72]
                 st.session_state.phase = "consent"
                 st.rerun()
             else:
-                retry_msg = "심사 요청 여부를 명확히 확정해 주십시오."
-                if st.session_state.tone == "해요체": retry_msg = "심사를 진행할지 결정해서 말해줘요."
-                if st.session_state.tone == "반말체": retry_msg = "심사 요청할 건지 결정해서 말해."
-                
-                st.session_state.chat_log.append(("assistant", retry_msg))
+                # 불명확한 답변 시 재확인
+                retry = "심사 진행 여부를 명확하게 말씀해 주십시오." if st.session_state.tone == "격식체" else "심사 진행할지 다시 알려주세요."
+                st.session_state.chat_log.append(("assistant", retry))
                 st.rerun()
 
         # ==============================
