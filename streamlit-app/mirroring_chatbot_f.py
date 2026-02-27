@@ -551,14 +551,14 @@ elif st.session_state.phase == "conversation":
                 st.rerun()
 
     # ==================================================
-    # 🔵 RECOMMEND 시나리오 (0-1 묶음 + 종료 5초)
+    # 🔵 RECOMMEND 시나리오 (GPT 제안 포함)
     # ==================================================
     else:
 
-        # STEP 0-1: 접속 + 시작 안내 (한 번에 출력)
+        # STEP 0-1: 접속 + 시작 안내
         if st.session_state.step_index == 0:
-            st.session_state.chat_log.append(("assistant", script[0]))  # 접속
-            st.session_state.chat_log.append(("assistant", script[1]))  # 시작 안내
+            st.session_state.chat_log.append(("assistant", script[0]))
+            st.session_state.chat_log.append(("assistant", script[1]))
             st.session_state.step_index = 1
             st.rerun()
 
@@ -569,7 +569,7 @@ elif st.session_state.phase == "conversation":
         st.session_state.chat_log.append(("user", user_input))
 
         # ==================================================
-        # STEP 2: 조건 제시 요청
+        # STEP 1: 조건 제시 요청
         # ==================================================
         if st.session_state.step_index == 1:
 
@@ -578,27 +578,61 @@ elif st.session_state.phase == "conversation":
             st.rerun()
 
         # ==================================================
-        # STEP 3: 옵션 검토
+        # STEP 2: 🔥 GPT가 실제 여행 상품 제안
         # ==================================================
         elif st.session_state.step_index == 2:
 
-            st.session_state.chat_log.append(("assistant", script[3]))
+            system_prompt = f"""
+    당신은 여행 추천 상담 AI입니다.
+    사용자의 조건을 바탕으로 구체적인 여행 상품 1~2개를 제안하십시오.
+    상품에는 다음 요소를 포함하십시오:
+
+    - 여행 지역
+    - 일정
+    - 주요 포함 사항
+    - 간단한 설명
+
+    말투는 반드시 {st.session_state.tone} 스타일을 따르십시오.
+    절차 안내 문장은 쓰지 마십시오.
+    """
+
+            response = client.chat.completions.create(
+                model="gpt-4o",
+                temperature=0.7,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_input}
+                ]
+            )
+
+            reply = response.choices[0].message.content.strip()
+            st.session_state.chat_log.append(("assistant", reply))
+
             st.session_state.step_index = 3
             st.rerun()
 
         # ==================================================
-        # STEP 4: 결정 단계
+        # STEP 3: 옵션 검토 안내
         # ==================================================
         elif st.session_state.step_index == 3:
 
-            st.session_state.chat_log.append(("assistant", script[4]))
+            st.session_state.chat_log.append(("assistant", script[3]))
             st.session_state.step_index = 4
             st.rerun()
 
         # ==================================================
-        # STEP 5: 종료 → 5초 후 consent 이동
+        # STEP 4: 결정 요청
         # ==================================================
         elif st.session_state.step_index == 4:
+
+            st.session_state.chat_log.append(("assistant", script[4]))
+            st.session_state.step_index = 5
+            st.rerun()
+
+       # ==================================================
+        # STEP 5: 종료 → 5초 후 consent
+        # ==================================================
+        elif st.session_state.step_index == 5:
 
             final_msg = script[5]
             st.session_state.chat_log.append(("assistant", final_msg))
