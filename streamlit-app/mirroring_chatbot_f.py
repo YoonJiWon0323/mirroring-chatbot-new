@@ -469,11 +469,11 @@ elif st.session_state.phase == "conversation":
     script = SCRIPT[key]
 
     # ==================================================
-    # 🔵 REFUND 시나리오
+    # 🔵 REFUND 시나리오 (단계 완전 분리)
     # ==================================================
     if st.session_state.scenario == "refund":
 
-        # STEP 0
+        # STEP 0: 접속 안내
         if st.session_state.step_index == 0:
             st.session_state.chat_log.append(("assistant", script[0]))
             st.session_state.chat_log.append(("assistant", script[1]))
@@ -487,73 +487,38 @@ elif st.session_state.phase == "conversation":
 
         st.session_state.chat_log.append(("user", user_input))
 
-        # STEP 1
+        # ==================================================
+        # STEP 1: 규정 고지 (수수료만)
+        # ==================================================
         if st.session_state.step_index == 1:
 
-            base_message = script[3]
+            regulation_msg = script[3]  # "수수료 75만 원..."
 
-            system_prompt = f"""
-{PROMPT_BLOCK[st.session_state.tone]}
-
-[현재 단계]
-규정 안내 단계입니다.
-
-- 반드시 아래 문장을 포함하십시오:
-{base_message}
-
-- 사용자 입력을 반영하여 1~2문장 보강하십시오.
-"""
-
-            response = client.chat.completions.create(
-                model="gpt-4o",
-                temperature=0.3,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_input}
-                ]
-            )
-
-            reply = response.choices[0].message.content.strip()
-            st.session_state.chat_log.append(("assistant", reply))
+            st.session_state.chat_log.append(("assistant", regulation_msg))
 
             st.session_state.step_index = 2
             st.rerun()
 
-        # STEP 2
+        # ==================================================
+        # STEP 2: 예외 가능성 안내 (구체 기준 직접 힌트 금지)
+        # ==================================================
         elif st.session_state.step_index == 2:
 
-            msg1 = script[4]
-            msg2 = script[5]
+            if st.session_state.tone == "격식체":
+                msg = "다만, 내부 기준에 부합하는 경우 예외 적용이 검토될 수 있습니다. 관련 서류 제출 시 재심사가 가능합니다."
+            elif st.session_state.tone == "해요체":
+                msg = "다만, 내부 기준에 맞는 경우에는 예외 적용이 검토될 수 있어요. 관련 서류를 제출하면 재심사가 가능해요."
+            else:  # 반말체
+                msg = "다만, 내부 기준에 맞으면 예외 적용을 검토할 수 있어. 서류 내면 재심사 가능해."
 
-            system_prompt = f"""
-{PROMPT_BLOCK[st.session_state.tone]}
-
-[현재 단계]
-예외 기준 안내 단계입니다.
-
-- 반드시 아래 두 문장을 포함하십시오:
-1. {msg1}
-2. {msg2}
-
-- 사용자 입력을 반영하여 자연스럽게 연결하십시오.
-"""
-
-            response = client.chat.completions.create(
-                model="gpt-4o",
-                temperature=0.3,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_input}
-                ]
-            )
-
-            reply = response.choices[0].message.content.strip()
-            st.session_state.chat_log.append(("assistant", reply))
+            st.session_state.chat_log.append(("assistant", msg))
 
             st.session_state.step_index = 3
             st.rerun()
 
-        # STEP 3
+        # ==================================================
+        # STEP 3: 심사 요청 여부 확인 (단독 단계)
+        # ==================================================
         elif st.session_state.step_index == 3:
 
             decision_keywords = [
@@ -563,22 +528,30 @@ elif st.session_state.phase == "conversation":
 
             if any(k in user_input for k in decision_keywords):
 
-                final_msg = script[6]
+                final_msg = script[6]  # "심사 승인 대기 처리..."
                 st.session_state.chat_log.append(("assistant", final_msg))
                 st.chat_message("assistant").write(final_msg)
 
                 with st.spinner("심사 결과 처리 중..."):
-                    time.sleep(3)
+                    time.sleep(2)
 
                 st.session_state.phase = "consent"
                 st.rerun()
 
             else:
-                st.session_state.chat_log.append(("assistant", script[5]))
+                # 다시 한 번 요청 여부만 질문
+                if st.session_state.tone == "격식체":
+                    ask_msg = "심사 요청 여부를 확정하십시오."
+                elif st.session_state.tone == "해요체":
+                    ask_msg = "심사 요청할지 결정해 주세요."
+                else:
+                    ask_msg = "심사 요청할지 정해."
+
+                st.session_state.chat_log.append(("assistant", ask_msg))
                 st.rerun()
 
     # ==================================================
-    # 🔵 RECOMMEND 시나리오
+    # 🔵 RECOMMEND 시나리오 (기존 유지)
     # ==================================================
     else:
 
