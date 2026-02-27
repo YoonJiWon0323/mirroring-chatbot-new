@@ -408,11 +408,13 @@ elif st.session_state.phase == "conversation":
         st.chat_message(role).write(message)
 
     key = f"{st.session_state.scenario}_{st.session_state.tone}"
+    script = SCRIPT[key]
     current_step = script[st.session_state.step_index]
 
     # 첫 안내 메시지
     if st.session_state.step_index == 0 and len(st.session_state.chat_log) == 0:
         st.session_state.chat_log.append(("assistant", current_step))
+        st.rerun()
 
     user_input = st.chat_input("입력하세요")
 
@@ -422,20 +424,7 @@ elif st.session_state.phase == "conversation":
         st.session_state.chat_log.append(("user", user_input))
 
         # 2️⃣ GPT 호출
-        key = f"{st.session_state.scenario}_{st.session_state.tone}"
-        base_prompt = PROMPTS[key]
-        
-        system_prompt = f"""
-        {base_prompt}
-        
-        [현재 단계 안내]
-        {current_step}
-        - 반드시 현재 단계와 관련된 응답만 하십시오.
-        - 새로운 질문을 만들지 마십시오.
-        - 이미 받은 정보를 반복해서 묻지 마십시오.
-        - 응답은 1~2문장으로 제한하십시오.
-        """
-
+        system_prompt = build_system_prompt(current_step)
         response = client.chat.completions.create(
             model="gpt-4o",
             temperature=0.3,
