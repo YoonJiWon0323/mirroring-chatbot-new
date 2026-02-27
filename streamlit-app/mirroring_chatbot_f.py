@@ -380,9 +380,10 @@ def build_system_prompt(current_step):
 {current_step}
 
 [응답 규칙]
-- 반드시 현재 단계와 관련된 내용만 답변하십시오.
-- 이미 제공된 정보를 반복해서 묻지 마십시오.
-- 답변은 1~2문장으로 제한하십시오.
+- 현재 단계의 핵심 지시 내용을 벗어나지 마십시오.
+- 단계 문장을 그대로 반복하지 마십시오.
+- 사용자의 발화에 맞추어 동일한 톤으로 1~2문장 보충 설명만 제공하십시오.
+- 다음 단계로 넘어가지 마십시오.
 """
     
 # ==================================================
@@ -493,8 +494,8 @@ elif st.session_state.phase == "conversation":
                 st.session_state.chat_log.append(("assistant", next_step))
 
         else:
-            # 조건 미충족 → 현재 단계 다시 안내
-            st.session_state.chat_log.append(("assistant", current_step))
+            # 조건 미충족이면 step 유지 (문장 재출력 X)
+            pass
 
         st.rerun()
         
