@@ -612,13 +612,42 @@ elif st.session_state.phase == "conversation":
             st.rerun()
 
         # ==================================================
-        # STEP 3: 옵션 검토 안내
+        # STEP 3: 옵션 검토 (질문 대응 가능)
         # ==================================================
         elif st.session_state.step_index == 3:
 
-            st.session_state.chat_log.append(("assistant", script[3]))
-            st.session_state.step_index = 4
-            st.rerun()
+            # 질문 감지
+            if "?" in user_input or "얼마" in user_input or "예산" in user_input:
+
+                system_prompt = f"""
+        당신은 여행 상담 AI입니다.
+        사용자가 제안된 상품에 대해 추가 정보를 요청했습니다.
+        구체적으로 답하십시오.
+        가격, 조건 등 필요한 정보를 제공하십시오.
+        말투는 반드시 {st.session_state.tone} 스타일을 따르십시오.
+        절차 안내 문장은 쓰지 마십시오.
+        """
+
+                response = client.chat.completions.create(
+                    model="gpt-4o",
+                    temperature=0.7,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_input}
+                    ]
+                )
+
+                reply = response.choices[0].message.content.strip()
+                st.session_state.chat_log.append(("assistant", reply))
+
+                # 🔥 단계 유지 (step_index 증가 안 함)
+                st.rerun()
+
+            else:
+                # 질문이 아니면 다음 단계로
+                st.session_state.chat_log.append(("assistant", script[3]))
+                st.session_state.step_index = 4
+                st.rerun()
 
         # ==================================================
         # STEP 4: 결정 요청
