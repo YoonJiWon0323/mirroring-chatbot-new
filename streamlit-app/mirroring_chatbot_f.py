@@ -530,20 +530,19 @@ elif st.session_state.phase == "conversation":
         msg2 = script[5]
 
         system_prompt = f"""
-{PROMPT_BLOCK[st.session_state.tone]}
+        {PROMPT_BLOCK[st.session_state.tone]}
+        [현재 단계]
+        예외 기준 안내 및 심사 요청 단계입니다.
 
-[현재 단계]
-예외 기준 안내 및 심사 요청 단계입니다.
+        [지시]
+        - 반드시 아래 두 문장을 포함하십시오:
+        1. {msg1}
+        2. {msg2}
 
-[지시]
-- 반드시 아래 두 문장을 포함하십시오:
-1. {msg1}
-2. {msg2}
-
-- 사용자 발화를 고려하여 자연스럽게 연결하십시오.
-- 2~3문장 이내로 작성하십시오.
-- 다음 단계로 넘어가지 마십시오.
-"""
+        - 사용자 발화를 고려하여 자연스럽게 연결하십시오.
+        - 2~3문장 이내로 작성하십시오.
+        - 다음 단계로 넘어가지 마십시오.
+        """
 
         response = client.chat.completions.create(
             model="gpt-4o",
