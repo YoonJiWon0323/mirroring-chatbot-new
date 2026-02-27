@@ -458,7 +458,7 @@ elif st.session_state.phase == "scenario":
 
 
 # ==================================================
-# 4️⃣ 단계 고정 대화 (첨부된 대비표 문구 엄격 적용)
+# 4️⃣ 단계 고정 대화 (문서 내 프롬프트 및 템플릿 완전 반영)
 # ==================================================
 elif st.session_state.phase == "conversation":
 
@@ -472,12 +472,12 @@ elif st.session_state.phase == "conversation":
         st.session_state.retry_count = 0
 
     # ---------------------------
-    # STEP 0: 접속 및 시작 (0단계 & 1단계 & 2단계)
+    # STEP 0: 접속 및 시작 (0~2단계)
     # ---------------------------
     if st.session_state.step_index == 0:
-        st.session_state.chat_log.append(("assistant", script[0]))  # 0. 접속 [cite: 70, 72]
-        st.session_state.chat_log.append(("assistant", script[1]))  # 1. 시작 [cite: 70, 72]
-        st.session_state.chat_log.append(("assistant", script[2]))  # 2. 사유 요청 [cite: 70, 72]
+        st.session_state.chat_log.append(("assistant", script[0]))  # 0. 접속 
+        st.session_state.chat_log.append(("assistant", script[1]))  # 1. 시작 
+        st.session_state.chat_log.append(("assistant", script[2]))  # 2. 사유 요청 
         st.session_state.step_index = 1
         st.rerun()
 
@@ -490,43 +490,77 @@ elif st.session_state.phase == "conversation":
         # STEP 1: 사유 판정 및 규정 안내 (3단계)
         # ---------------------------
         if st.session_state.step_index == 1:
-            # 예외 키워드 확인 [cite: 30, 31, 32]
-            exception_keywords = ["건강", "아파", "병원", "진단", "가족", "사고", "날씨", "태풍", "비행기", "지연", "결항", "취소"]
-            is_exception = any(k in user_input for k in exception_keywords)
-            
-            # 단순 변심 등 부적합 사유 확인
+            # 예외 키워드 및 부적합 키워드 체크
+            is_exception = any(k in user_input for k in ["건강", "질병", "사고", "날씨", "천재지변", "항공", "지연", "취소"])
             is_invalid = any(k in user_input for k in ["변심", "그냥", "생각이 바뀌", "단순"])
 
+            # 상황 A: 단순 변심 (예외 대상 아님 고지) 
             if is_invalid:
-                # 부적합 사유일 경우: 재질문 없이 바로 규정 통보 (3단계) 
                 if st.session_state.tone == "격식체":
-                    prefix = "단순 변심은 예외 검토 대상이 아닙니다. "
+                    prefix = "단순 변심은 내부 규정상 예외 적용 대상이 아닙니다. " [cite: 8, 9]
                 elif st.session_state.tone == "해요체":
-                    prefix = "단순 변심은 예외 대상이 아니에요. "
+                    prefix = "단순 변심은 규정상 예외로 인정되지 않아요. " [cite: 16, 17]
                 else:
-                    prefix = "단순 변심은 예외 대상이 아니야. "
+                    prefix = "단순 변심은 규정상 예외 대상이 아니야. " [cite: 24, 25]
                 
-                st.session_state.chat_log.append(("assistant", prefix + script[3]))
+                st.session_state.chat_log.append(("assistant", prefix + script[3])) # 규정 문구 출력 [cite: 27, 70]
                 st.session_state.step_index = 2
                 st.rerun()
 
+            # 상황 B: 사유 모호 (최대 2회 재질문)
             elif not is_exception and st.session_state.retry_count < 2:
-                # 모호한 사유일 경우: 최대 2회까지 재질문 (제시한 톤 유지)
                 st.session_state.retry_count += 1
                 if st.session_state.tone == "격식체":
-                    msg = "심사 규정에 따라 구체적인 증빙 가능 사유가 필요합니다. 다시 입력하십시오."
+                    msg = "심사 규정에 따라 구체적인 증빙 가능 사유가 필요합니다. 다시 입력하십시오." [cite: 5, 8]
                 elif st.session_state.tone == "해요체":
-                    msg = "심사 규정상 구체적인 이유가 필요해요. 다시 적어주세요."
+                    msg = "규정 확인을 위해 구체적인 사유가 필요해요. 다시 적어주세요." [cite: 13, 16]
                 else:
-                    msg = "규정상 구체적인 이유가 필요해. 다시 적어."
+                    msg = "규정 확인하려면 구체적인 이유가 필요해. 다시 적어." [cite: 21, 24]
                 
                 st.session_state.chat_log.append(("assistant", msg))
                 st.rerun()
             
+            # 상황 C: 적합 사유 혹은 횟수 초과 (3단계 진행)
             else:
-                # 적합 사유이거나 횟수 초과 시: 규정 안내 (3단계) 
-                st.session_state.chat_log.append(("assistant", script[3]))
+                st.session_state.chat_log.append(("assistant", script[3])) # 규정 문구 
                 st.session_state.step_index = 2
+                st.rerun()
+
+        # ---------------------------
+        # STEP 2: 예외 기준 템플릿 안내 및 요청 (4~5단계)
+        # ---------------------------
+        elif st.session_state.step_index == 2:
+            # 말투별 권장 답변 템플릿 내용 구성 [cite: 28, 33, 38]
+            if st.session_state.tone == "격식체":
+                template = "예외 적용은 본인 또는 직계 가족의 건강상 사유, 천재지변, 항공사 측의 운항 변경 등에 한하여 검토됩니다. " [cite: 29, 30, 31, 32]
+            elif st.session_state.tone == "해요체":
+                template = "예외 적용은 보통 건강 문제나 불가항력 상황, 항공사 사정으로 일정이 변경된 경우에 검토해요. " [cite: 34, 35, 36, 37]
+            else:
+                template = "예외 적용은 건강 문제, 불가항력 상황, 항공사 일정 변경 시에만 검토돼. " [cite: 39, 40, 41, 42]
+
+            st.session_state.chat_log.append(("assistant", template + script[4])) # 4. 협상 (재심사 안내) 
+            st.session_state.chat_log.append(("assistant", script[5])) # 5. 요청 (확정 요청) 
+            st.session_state.step_index = 3
+            st.rerun()
+
+        # ---------------------------
+        # STEP 3: 종료 및 5초 대기 (6단계)
+        # ---------------------------
+        elif st.session_state.step_index == 3:
+            if any(k in user_input for k in ["요청", "진행", "심사", "확정", "해"]):
+                final_msg = script[6] # 6. 종료 
+                st.session_state.chat_log.append(("assistant", final_msg))
+                st.chat_message("assistant").write(final_msg)
+                
+                import time
+                with st.spinner("데이터 저장 중..."):
+                    time.sleep(5) # 5초 대기 로직
+                
+                st.session_state.phase = "consent"
+                st.rerun()
+            else:
+                retry = "심사 진행 여부를 확정하십시오." if st.session_state.tone == "격식체" else "심사 요청 여부를 결정해 주세요."
+                st.session_state.chat_log.append(("assistant", retry))
                 st.rerun()
 
         # ---------------------------
