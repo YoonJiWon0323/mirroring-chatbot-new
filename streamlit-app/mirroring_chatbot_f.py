@@ -460,6 +460,9 @@ elif st.session_state.phase == "scenario":
 # ==================================================
 # 4️⃣ 단계 고정 대화
 # ==================================================
+# ==================================================
+# 4️⃣ 단계 고정 대화 (단계별 순차 진행 및 사유 검증 강화)
+# ==================================================
 elif st.session_state.phase == "conversation":
 
     for role, message in st.session_state.chat_log:
@@ -468,59 +471,55 @@ elif st.session_state.phase == "conversation":
     key = f"{st.session_state.scenario}_{st.session_state.tone}"
     script = SCRIPT[key]
 
-    # ==============================
-    # STEP 0: 접속 + 시작 + 사유 요청
-    # ==============================
-    if st.session_state.scenario == "refund" and st.session_state.step_index == 0:
-
+    # ---------------------------
+    # STEP 0: 초기 인사 및 사유 요청 (최초 1회)
+    # ---------------------------
+    if st.session_state.step_index == 0:
         st.session_state.chat_log.append(("assistant", script[0]))  # 접속
         st.session_state.chat_log.append(("assistant", script[1]))  # 시작
-        st.session_state.chat_log.append(("assistant", script[2]))  # 사유 요청
-
+        st.session_state.chat_log.append(("assistant", script[2]))  # 사유 요청 안내 (상세 입력하십시오)
         st.session_state.step_index = 1
         st.rerun()
 
-    user_input = st.chat_input("입력하세요")
+    user_input = st.chat_input("메시지를 입력해 주세요.")
 
     if user_input:
-
         st.session_state.chat_log.append(("user", user_input))
 
-        # ==============================
-        # STEP 1: 사유 입력 후 → 규정 안내
-        # ==============================
+        # ---------------------------
+        # STEP 1: 사유 구체성 검종 (환불 시나리오 전용)
+        # ---------------------------
         if st.session_state.scenario == "refund" and st.session_state.step_index == 1:
-
-            # 규정 단계 (파일 3페이지 기준 3단계)
-            st.session_state.chat_log.append(("assistant", script[3]))
-
-            # 협상 단계 (파일 3페이지 기준 4단계)
-            st.session_state.chat_log.append(("assistant", script[4]))
-
-            # 요청 단계 (파일 3페이지 기준 5단계)
-            st.session_state.chat_log.append(("assistant", script[5]))
-
-            st.session_state.step_index = 2
-            st.rerun()
-
-        # ==============================
-        # STEP 2: 사용자가 요청 여부 답변
-        # ==============================
-        elif st.session_state.scenario == "refund" and st.session_state.step_index == 2:
-
-            if any(k in user_input for k in ["요청", "진행", "심사"]):
-
-                # 종료 단계 (파일 기준 6단계)
-                st.session_state.chat_log.append(("assistant", script[6]))
-
-                # 👉 여기서만 설문 이동
-                st.session_state.phase = "consent"
+            # 글자 수나 키워드로 구체성 판단 (예: 10자 미만이면 다시 물음)
+            if len(user_input.strip()) < 10:
+                fail_msg = "제시하신 사유가 구체적이지 않습니다. 심사를 위해 상세한 취소 사유를 입력해 주십시오."
+                if st.session_state.tone == "해요체": fail_msg = "말씀하신 내용이 조금 부족해요. 상세한 이유를 다시 적어주세요."
+                if st.session_state.tone == "반말체": fail_msg = "내용이 너무 짧아. 자세한 이유를 다시 적어."
+                
+                st.session_state.chat_log.append(("assistant", fail_msg))
+                st.rerun()
+            else:
+                # 사유가 충분하면 다음 단계(수수료 안내)로 이동
+                st.session_state.chat_log.append(("assistant", script[3])) # 수수료 안내
+                st.session_state.chat_log.append(("assistant", script[4])) # 서류 제출 안내
+                st.session_state.chat_log.append(("assistant", script[5])) # 심사 확정 요청
+                st.session_state.step_index = 2
                 st.rerun()
 
+        # ---------------------------
+        # STEP 2: 최종 심사 요청 확인
+        # ---------------------------
+        elif st.session_state.scenario == "refund" and st.session_state.step_index == 2:
+            if any(k in user_input for k in ["요청", "진행", "심사", "확정", "알았어", "해줘"]):
+                st.session_state.chat_log.append(("assistant", script[6])) # 종료 단계
+                st.session_state.phase = "consent"
+                st.rerun()
             else:
-                st.session_state.chat_log.append(
-                    ("assistant", "심사 요청 여부를 명확히 입력해 주십시오.")
-                )
+                retry_msg = "심사 요청 여부를 명확히 확정해 주십시오."
+                if st.session_state.tone == "해요체": retry_msg = "심사를 진행할지 결정해서 말해줘요."
+                if st.session_state.tone == "반말체": retry_msg = "심사 요청할 건지 결정해서 말해."
+                
+                st.session_state.chat_log.append(("assistant", retry_msg))
                 st.rerun()
 
         # ==============================
