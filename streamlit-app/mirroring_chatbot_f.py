@@ -431,10 +431,14 @@ elif st.session_state.phase == "conversation":
 
         # ---------------- STEP 0 안내 ----------------
         if st.session_state.step_index == 0:
-            st.session_state.chat_log.append(("assistant", script[0]))
-            st.session_state.chat_log.append(("assistant", script[1]))
-            st.session_state.chat_log.append(("assistant", script[2]))  # 취소 사유 입력 안내
-            st.session_state.step_index = 1
+
+            if "intro_done" not in st.session_state:
+                st.session_state.chat_log.append(("assistant", script[0]))
+                st.session_state.chat_log.append(("assistant", script[1]))
+                st.session_state.chat_log.append(("assistant", script[2]))
+                st.session_state.intro_done = True
+                st.session_state.step_index = 1
+                st.rerun()
 
     # ==================================================
     # STEP 1: 환불 요청 및 사유 설명
