@@ -788,18 +788,20 @@ elif st.session_state.phase == "conversation":
         # ---------------- STEP 7 종료 (5초 유지) ----------------
         elif st.session_state.step_index == 7:
 
+            # 최초 진입
             if "end_time" not in st.session_state:
                 st.session_state.chat_log.append(("assistant", script[7]))
                 st.session_state.end_time = time.time()
                 st.rerun()
 
+            # 5초 유지
             if time.time() - st.session_state.end_time < 5:
                 st.stop()
 
-            # 🔥 여기로 내려와야 실행됨
+            # 🔥 5초 후 설문 이동
             del st.session_state.end_time
             st.session_state.phase = "consent"
-            st.stop()
+            st.rerun()
 
 # --------------------------------------------------
 # 파트 4: 설문 + Google Sheets 저장
