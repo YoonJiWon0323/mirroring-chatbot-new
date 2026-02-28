@@ -429,7 +429,7 @@ elif st.session_state.phase == "conversation":
 
         script = SCRIPT[f"refund_{st.session_state.tone}"]
 
-        #---------------- STEP 0 안내 ----------------
+        # ---------------- STEP 0 안내 ----------------
         if st.session_state.step_index == 0:
 
             if "intro_done" not in st.session_state:
@@ -438,25 +438,26 @@ elif st.session_state.phase == "conversation":
                 st.session_state.chat_log.append(("assistant", script[2]))
                 st.session_state.intro_done = True
 
-            # step_index만 바꾸고 rerun 안 함
             st.session_state.step_index = 1
 
 
-        # ---------------- STEP 1 취소 사유 입력 ----------------
+        # ---------------- STEP 1 사유 입력 ----------------
         if st.session_state.step_index == 1:
 
-            user_input = st.chat_input("환불 요청과 취소 사유를 작성하십시오.")
+            user_input = st.chat_input(script[2])  # 🔥 SCRIPT 문구 그대로 사용
 
             if user_input:
                 st.session_state.chat_log.append(("user", user_input))
 
                 if len(user_input.strip()) < 20:
+                    # 다시 SCRIPT 안내 반복
                     st.session_state.chat_log.append(("assistant", script[2]))
                 else:
+                    # 규정 안내 (SCRIPT 유지)
                     st.session_state.chat_log.append(("assistant", script[3]))
                     st.session_state.step_index = 2
 
-            st.rerun()
+                st.rerun()
 
     # ==================================================
     # STEP 2: 규정 확인 및 예외 가능 여부 문의
