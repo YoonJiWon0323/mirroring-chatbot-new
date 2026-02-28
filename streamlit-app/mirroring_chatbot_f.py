@@ -333,15 +333,18 @@ PROMPT_BLOCK = {
 def is_reason_sufficient(user_input):
 
     judge_prompt = f"""
-다음 취소 사유가 아래 예외 기준 중 하나에 해당하는지만 판단하십시오.
+다음 취소 사유가 아래 예외 기준에 해당하는지 판단하십시오.
 
-예외 기준:
-1. 본인 또는 직계 가족의 건강 문제
-2. 천재지변 또는 날씨 등 불가항력 상황
-3. 항공사 사정으로 일정 변경 또는 취소
+예외 기준은 다음 세 가지뿐입니다:
 
-위 세 가지 중 하나에 해당하면 YES,
-전혀 해당하지 않으면 NO만 답하십시오.
+1. 본인 또는 직계 가족의 중대한 건강상 사유
+2. 천재지변 등 불가항력적 상황
+3. 항공사 측의 운항 변경 또는 취소
+
+위 세 가지에 명확히 해당하면 YES,
+해당하지 않거나 단순 개인 사정이면 NO만 답하십시오.
+
+반드시 YES 또는 NO 중 하나만 출력하십시오.
 
 사유:
 {user_input}
@@ -357,7 +360,8 @@ def is_reason_sufficient(user_input):
     )
 
     answer = response.choices[0].message.content.strip().upper()
-    return "YES" in answer
+
+    return answer == "YES"
 
 def check_step_completion(user_input, step_index, scenario):
 
@@ -532,11 +536,33 @@ elif st.session_state.phase == "conversation":
         elif st.session_state.step_index == 3:
 
             if "step3_done" not in st.session_state:
-                st.session_state.chat_log.append(("assistant", script[3]))
+
+                if st.session_state.tone == "격식체":
+                    regulation_msg = (
+                        "환불 여부는 내부 규정에 따라 결정됩니다.\n"
+                        "현재 기준에 따르면 취소 시 수수료 75만 원이 적용됩니다.\n"
+                        "다만, 예외 적용 여부는 별도 심사를 통해 판단됩니다."
+                    )
+
+                elif st.session_state.tone == "해요체":
+                    regulation_msg = (
+                        "환불 여부는 내부 규정에 따라 결정돼요.\n"
+                        "현재 기준으로는 취소 시 수수료 75만 원이 적용돼요.\n"
+                        "다만, 예외 적용 여부는 별도 심사를 통해 판단해요."
+                    )
+
+                else:  # 반말
+                    regulation_msg = (
+                        "환불 여부는 내부 규정에 따라 결정돼.\n"
+                        "지금 기준으로는 취소하면 수수료 75만 원이 적용돼.\n"
+                        "예외 적용 여부는 따로 심사해서 판단해."
+                    )
+
+                st.session_state.chat_log.append(("assistant", regulation_msg))
+
                 st.session_state.step3_done = True
                 st.session_state.step_index = 4
                 st.rerun()
-
 
         # ---------------- STEP 4 협상 (예외 판단 포함) ----------------
         elif st.session_state.step_index == 4:
@@ -545,10 +571,8 @@ elif st.session_state.phase == "conversation":
 
                 reason = st.session_state.get("refund_reason", "")
 
-                # 예외 조건 키워드 검사
-                health_keywords = ["입원", "병원", "수술", "건강", "사망"]
-                disaster_keywords = ["태풍", "지진", "폭설", "홍수", "천재지변"]
-                airline_keywords = ["항공사", "결항", "운항 취소", "일정 변경"]
+                # 🔥 GPT 기반 예외 판정
+                is_exception = is_reason_sufficient(reason)
 
                 is_exception = (
                     any(k in reason for k in health_keywords) or
@@ -626,29 +650,48 @@ elif st.session_state.phase == "conversation":
 
             st.session_state.chat_log.append(("user", user_input))
 
-            # 🔥 예외 아닌 경우 차단
+            text = user_input.strip()
+
+            # 🔥 요청 여부 판단
+            request_keywords = ["요청", "진행", "심사해", "해주세요", "해줘"]
+            decline_keywords = ["안", "안할", "취소", "안하겠"]
+
+            is_request = any(k in text for k in request_keywords)
+            is_decline = any(k in text for k in decline_keywords)
+
+            # 🔴 요청 안 하는 경우
+            if is_decline:
+                if st.session_state.tone == "격식체":
+                    msg = "심사 요청이 접수되지 않았습니다."
+                elif st.session_state.tone == "해요체":
+                    msg = "심사 요청은 진행되지 않았어요."
+                else:
+                    msg = "심사 요청 안 한 걸로 처리할게."
+
+                st.session_state.chat_log.append(("assistant", msg))
+                st.session_state.phase = "consent"
+                st.rerun()
+
+            # 🔴 예외 아닌데 요청하는 경우
             if not st.session_state.get("is_exception", False):
                 if st.session_state.tone == "격식체":
-                    deny_msg = "해당 사유는 예외 적용 대상이 아니므로 심사 요청이 불가합니다."
+                    msg = "해당 사유는 예외 대상이 아니므로 심사 요청이 불가합니다."
                 elif st.session_state.tone == "해요체":
-                    deny_msg = "해당 사유는 예외 대상이 아니라서 심사 요청이 어려워요."
+                    msg = "해당 사유는 예외 대상이 아니라서 심사 요청이 어려워요."
                 else:
-                    deny_msg = "그 사유로는 심사 요청 안 돼."
+                    msg = "그 사유로는 심사 요청 안 돼."
 
-                st.session_state.chat_log.append(("assistant", deny_msg))
-
-                # 🔥 다시 사유 입력 단계로 복귀
+                st.session_state.chat_log.append(("assistant", msg))
                 st.session_state.step_index = 2
-                st.session_state.step2_prompted = False
-                st.session_state.step4_done = False
-                st.session_state.step5_prompted = False
-
                 st.rerun()
 
-            else:
-                # 예외 인정된 경우에만 STEP6 진행
+            # 🟢 예외 + 요청함
+            if is_request and st.session_state.get("is_exception", False):
                 st.session_state.step_index = 6
                 st.rerun()
+
+            # 그 외 애매한 입력
+            st.rerun()
 
         # ---------------- STEP 6 종료 ----------------
         elif st.session_state.step_index == 6:
