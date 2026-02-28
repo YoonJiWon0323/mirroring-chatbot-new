@@ -423,7 +423,7 @@ elif st.session_state.phase == "conversation":
         st.chat_message(role).write(message)
 
     # ==================================================
-    # 🔵 REFUND SCENARIO (완전 분리 안정 버전)
+    # 🔵 REFUND SCENARIO (SCRIPT 유지 + 절차 정확 통제)
     # ==================================================
     if st.session_state.scenario == "refund":
 
@@ -433,59 +433,74 @@ elif st.session_state.phase == "conversation":
         if st.session_state.step_index == 0:
             st.session_state.chat_log.append(("assistant", script[0]))
             st.session_state.chat_log.append(("assistant", script[1]))
-            st.session_state.chat_log.append(("assistant", script[2]))
+            st.session_state.chat_log.append(("assistant", script[2]))  # 취소 사유 입력 안내
             st.session_state.step_index = 1
             st.rerun()
 
-        # ---------------- STEP 1 취소 사유 입력 ----------------
-        elif st.session_state.step_index == 1:
+    # ==================================================
+    # STEP 1: 환불 요청 및 사유 설명
+    # ==================================================
+    elif st.session_state.step_index == 1:
 
-            user_input = st.chat_input("취소 사유를 입력하십시오.")
-            if not user_input:
-                st.stop()
+        user_input = st.chat_input("환불 요청과 취소 사유를 작성하십시오.")
+        if not user_input:
+            st.stop()
 
-            st.session_state.chat_log.append(("user", user_input))
+        st.session_state.chat_log.append(("user", user_input))
 
-            # 규정 안내
-            st.session_state.chat_log.append(("assistant", script[3]))
-            st.session_state.step_index = 2
+        # 최소 길이 조건
+        if len(user_input.strip()) < 20:
+            st.session_state.chat_log.append(("assistant", script[2]))
             st.rerun()
 
-        # ---------------- STEP 2 심사 요청 여부 ----------------
-        elif st.session_state.step_index == 2:
+        # 규정 안내 (SCRIPT 사용)
+        st.session_state.chat_log.append(("assistant", script[3]))
+        st.session_state.step_index = 2
+        st.rerun()
 
-            user_input = st.chat_input("심사 요청 여부를 입력하십시오.")
-            if not user_input:
-                st.stop()
+    # ==================================================
+    # STEP 2: 규정 확인 및 예외 가능 여부 문의
+    # ==================================================
+    elif st.session_state.step_index == 2:
 
-            st.session_state.chat_log.append(("user", user_input))
+        user_input = st.chat_input("규정을 확인한 후 질문하십시오.")
+        if not user_input:
+            st.stop()
 
-            decision_keywords = [
-                "요청", "진행", "심사", "확정",
-                "네", "예", "하겠습니다", "할게", "해주세요"
-            ]
+        st.session_state.chat_log.append(("user", user_input))
 
-            if any(k in user_input for k in decision_keywords):
+        # 질문 여부 간단 확인
+        if not any(k in user_input for k in ["?", "적용", "가능", "예외"]):
+            st.session_state.chat_log.append(("assistant", script[4]))
+            st.rerun()
 
-                final_msg = script[6]
-                st.session_state.chat_log.append(("assistant", final_msg))
-                st.chat_message("assistant").write(final_msg)
+        # 예외 안내 (SCRIPT 유지)
+        st.session_state.chat_log.append(("assistant", script[4]))
+        st.session_state.step_index = 3
+        st.rerun()
 
-                time.sleep(2)
+    # ==================================================
+    # STEP 3: 최종 심사 요청
+    # ==================================================
+    elif st.session_state.step_index == 3:
 
-                st.session_state.phase = "consent"
-                st.rerun()
+        user_input = st.chat_input("최종 심사 요청 메시지를 작성하십시오.")
+        if not user_input:
+            st.stop()
 
-            else:
-                if st.session_state.tone == "격식체":
-                    ask_msg = "심사 요청 여부를 확정하십시오."
-                elif st.session_state.tone == "해요체":
-                    ask_msg = "심사 요청할지 결정해 주세요."
-                else:
-                    ask_msg = "심사 요청할지 정해."
+        st.session_state.chat_log.append(("user", user_input))
 
-                st.session_state.chat_log.append(("assistant", ask_msg))
-                st.rerun()
+        if not any(k in user_input for k in ["심사", "요청", "진행"]):
+            st.session_state.chat_log.append(("assistant", script[5]))
+            st.rerun()
+
+        # 최종 승인 대기 (SCRIPT 유지)
+        st.session_state.chat_log.append(("assistant", script[6]))
+        st.chat_message("assistant").write(script[6])
+
+        time.sleep(2)
+        st.session_state.phase = "consent"
+        st.rerun()
 
     # ==================================================
     # RECOMMEND SCENARIO (유연 통제형 구조)
