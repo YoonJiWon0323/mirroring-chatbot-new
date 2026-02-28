@@ -662,27 +662,58 @@ elif st.session_state.phase == "conversation":
 
             # STEP4로 이동
             st.session_state.step_index = 4
-            st.session_state.chat_log.append(("assistant", script[4]))
 
             st.rerun()
 
-        # ---------------- STEP 4 수정 요청 ----------------
+        # ---------------- STEP 4 수정 / 결정 판단 ----------------
         elif st.session_state.step_index == 4:
-
-            st.session_state.chat_log.append(("assistant", script[4]))
 
             user_input = st.chat_input(script[4])
             if not user_input:
                 st.stop()
 
             st.session_state.chat_log.append(("user", user_input))
-            normalized = user_input.strip()
 
-            if "없" in normalized:
-                st.session_state.step_index = 5
-            else:
+            # 🔥 GPT 의도 분류
+            classification = client.chat.completions.create(
+                model="gpt-4o",
+                temperature=0,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "사용자의 발화를 다음 중 하나로만 분류하십시오:\n"
+                            "1) 수정: 새로운 조건을 요청하거나 옵션 변경을 요구함\n"
+                            "2) 없음: 더 이상 수정이 없다고 명시함\n"
+                            "3) 결정: 특정 상품을 선택하거나 확정 의사를 표현함\n"
+                            "반드시 '수정', '없음', '결정' 중 하나만 답하십시오."
+                        )
+                    },
+                    {
+                        "role": "user",
+                        "content": user_input
+                    }
+                ]
+            )
+
+            intent = classification.choices[0].message.content.strip()
+
+            if intent == "수정":
                 st.session_state.user_condition = user_input
                 st.session_state.step_index = 3
+
+            elif intent == "없음":
+                st.session_state.step_index = 5
+                st.session_state.chat_log.append(("assistant", script[5]))
+
+            elif intent == "결정":
+                st.session_state.step_index = 6
+                st.session_state.chat_log.append(("assistant", script[6]))
+
+            else:
+                # 예외 방어
+                st.session_state.step_index = 5
+                st.session_state.chat_log.append(("assistant", script[5]))
 
             st.rerun()
 
@@ -690,27 +721,45 @@ elif st.session_state.phase == "conversation":
         # ---------------- STEP 5 추가 탐색 ----------------
         elif st.session_state.step_index == 5:
 
-            st.session_state.chat_log.append(("assistant", script[5]))
-
             user_input = st.chat_input(script[5])
             if not user_input:
                 st.stop()
 
             st.session_state.chat_log.append(("user", user_input))
-            normalized = user_input.strip()
 
-            if any(word in normalized for word in ["아니", "그만", "종료", "괜찮"]):
-                st.session_state.step_index = 6
-            else:
+            classification = client.chat.completions.create(
+                model="gpt-4o",
+                temperature=0,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "사용자의 발화를 다음 중 하나로만 분류하십시오:\n"
+                            "1) 계속: 더 탐색을 원함\n"
+                            "2) 종료: 더 이상 탐색을 원하지 않음\n"
+                            "반드시 '계속' 또는 '종료' 중 하나만 답하십시오."
+                        )
+                    },
+                    {
+                        "role": "user",
+                        "content": user_input
+                    }
+                ]
+            )
+
+            intent = classification.choices[0].message.content.strip()
+
+            if intent == "계속":
                 st.session_state.step_index = 3
+            else:
+                st.session_state.step_index = 6
+                st.session_state.chat_log.append(("assistant", script[6]))
 
             st.rerun()
 
 
         # ---------------- STEP 6 결정 ----------------
         elif st.session_state.step_index == 6:
-
-            st.session_state.chat_log.append(("assistant", script[6]))
 
             user_input = st.chat_input(script[6])
             if not user_input:
@@ -719,6 +768,7 @@ elif st.session_state.phase == "conversation":
             st.session_state.chat_log.append(("user", user_input))
 
             st.session_state.step_index = 7
+            st.session_state.chat_log.append(("assistant", script[7]))
             st.rerun()
 
 
