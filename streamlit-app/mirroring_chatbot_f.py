@@ -395,6 +395,43 @@ def classify_review_intent(user_input):
 
     return response.choices[0].message.content.strip()
 
+def analyze_user_intent(user_input):
+
+    judge_prompt = f"""
+다음 사용자 발화를 분석하십시오.
+
+아래 항목을 각각 YES 또는 NO로 판단하십시오.
+
+1. 질문이 포함되어 있는가?
+2. 심사 요청 의사가 있는가?
+3. 심사를 진행하지 않겠다는 의사가 있는가?
+
+반드시 아래 형식으로만 답하십시오:
+
+질문: YES/NO
+요청: YES/NO
+거절: YES/NO
+
+사용자 발화:
+{user_input}
+"""
+
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        temperature=0,
+        messages=[
+            {"role": "system", "content": "형식에 맞춰 판단만 하십시오."},
+            {"role": "user", "content": judge_prompt}
+        ]
+    )
+
+    text = response.choices[0].message.content
+
+    return {
+        "question": "YES" in text.splitlines()[0],
+        "request": "YES" in text.splitlines()[1],
+        "decline": "YES" in text.splitlines()[2],
+    }
 
 def check_step_completion(user_input, step_index, scenario):
 
@@ -676,40 +713,46 @@ elif st.session_state.phase == "conversation":
 
             st.session_state.chat_log.append(("user", user_input))
 
-            # 🔥 GPT 기반 요청 분류
-            intent = classify_review_intent(user_input)
+            analysis = analyze_user_intent(user_input)
 
-            # 🔴 1. 거절
-            if intent == "거절":
+            # 🔹 1️⃣ 질문이 포함된 경우 → 항상 먼저 답변
+            if analysis["question"]:
 
                 if st.session_state.tone == "격식체":
-                    msg = (
-                    "현재 기준에 따르면 취소 시 수수료 75만 원이 적용됩니다.\n"
-                    "다만, 예외 적용 사유에 해당하는 경우에는 별도 심사가 가능합니다.\n"
-                    "심사 요청 여부를 다시 한번 결정하시겠습니까?"
-                )
-
+                    exception_msg = (
+                        "예외 적용은 다음과 같은 사유에 한하여 검토됩니다.\n"
+                        "1. 본인 또는 직계 가족의 중대한 건강상 사유\n"
+                        "2. 천재지변 등 불가항력적 상황\n"
+                        "3. 항공사 측의 운항 변경 또는 취소\n"
+                        "해당 사유에 해당하는 경우에 한하여 추가 검토가 가능합니다."
+                    )
                 elif st.session_state.tone == "해요체":
-                    msg = (
-                        "지금 기준으로는 취소하면 수수료 75만 원이 적용돼요.\n"
-                        "다만, 예외 사유에 해당하면 별도 심사가 가능해요.\n"
-                        "심사 요청할지 다시 한번 결정해 보실래요?"
+                    exception_msg = (
+                        "예외 적용은 보통 다음과 같은 경우에 검토해요.\n"
+                        "1. 본인이나 직계 가족의 중대한 건강 문제\n"
+                        "2. 천재지변 같은 불가항력 상황\n"
+                        "3. 항공사 사정으로 일정이 변경되거나 취소된 경우\n"
+                        "이런 경우에 해당하면 추가 검토가 가능해요."
                     )
-
                 else:
-                    msg = (
-                        "지금 기준이면 취소하면 수수료 75만 원이 적용돼.\n"
-                        "예외 사유면 따로 심사 가능해.\n"
-                        "심사 요청할지 다시 정해."
+                    exception_msg = (
+                        "예외 적용은 다음 경우에만 검토돼.\n"
+                        "1. 본인이나 직계 가족의 중대한 건강 문제\n"
+                        "2. 천재지변 같은 불가항력 상황\n"
+                        "3. 항공사 일정 변경 또는 취소\n"
+                        "이런 경우에 해당하면 추가 검토가 가능해."
                     )
 
-                st.session_state.chat_log.append(("assistant", msg))
-
-                # 🔥 STEP 유지 (중요)
+                st.session_state.chat_log.append(("assistant", exception_msg))
                 st.rerun()
 
-            # 🔴 2. 요청했지만 예외 아님
-            elif intent == "요청" and not st.session_state.get("is_exception", False):
+            # 🔹 2️⃣ 요청 + 예외 대상
+            if analysis["request"] and st.session_state.get("is_exception", False):
+                st.session_state.step_index = 6
+                st.rerun()
+
+            # 🔹 3️⃣ 요청했지만 예외 아님
+            if analysis["request"] and not st.session_state.get("is_exception", False):
 
                 if st.session_state.tone == "격식체":
                     msg = "해당 사유는 예외 대상이 아니므로 심사 요청이 불가합니다."
@@ -722,24 +765,29 @@ elif st.session_state.phase == "conversation":
                 st.session_state.step_index = 2
                 st.rerun()
 
-            # 🟢 3. 요청 + 예외 대상
-            elif intent == "요청" and st.session_state.get("is_exception", False):
-
-                st.session_state.step_index = 6
-                st.rerun()
-
-            # 🔵 4. 불명확 입력
-            else:
+            # 🔹 4️⃣ 거절 (질문 없는 순수 거절만 종료 유도)
+            if analysis["decline"] and not analysis["question"]:
 
                 if st.session_state.tone == "격식체":
-                    msg = "심사 요청 여부를 명확히 입력하십시오."
+                    msg = "심사 요청 없이 종료하시겠습니까?"
                 elif st.session_state.tone == "해요체":
-                    msg = "심사 요청할지 명확히 말씀해 주세요."
+                    msg = "심사 요청 없이 종료할까요?"
                 else:
-                    msg = "요청할 건지 아닌지 정확히 말해."
+                    msg = "그냥 종료할 거야?"
 
                 st.session_state.chat_log.append(("assistant", msg))
                 st.rerun()
+
+            # 🔹 5️⃣ 애매한 입력
+            if st.session_state.tone == "격식체":
+                msg = "심사 요청 여부를 명확히 입력하십시오."
+            elif st.session_state.tone == "해요체":
+                msg = "심사 요청할지 명확히 말씀해 주세요."
+            else:
+                msg = "요청할 건지 아닌지 정확히 말해."
+
+            st.session_state.chat_log.append(("assistant", msg))
+            st.rerun()
 
         # ---------------- STEP 6 종료 ----------------
         elif st.session_state.step_index == 6:
