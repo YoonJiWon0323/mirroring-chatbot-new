@@ -661,53 +661,94 @@ elif st.session_state.phase == "conversation":
             st.session_state.step_index = 4
             st.rerun()
 
-        # ---------------- STEP 4 수정 여부 판단 ----------------
+        # ---------------- STEP 4 수정 요청 ----------------
         elif st.session_state.step_index == 4:
 
-            user_input = st.chat_input("수정 사항이 있으면 입력하세요. 없으면 '없음'이라고 입력하세요.")
+            # 멘트 한 번만 출력
+            if not st.session_state.get("step4_shown"):
+                st.session_state.chat_log.append(("assistant", script[4]))
+                st.session_state.step4_shown = True
+                st.rerun()
+
+            user_input = st.chat_input(script[4])
             if not user_input:
                 st.stop()
 
             st.session_state.chat_log.append(("user", user_input))
-
             normalized = user_input.strip()
 
-            if normalized in ["없음", "없어요", "없습니다", "아니요", "괜찮아요"]:
-                # 수정 없음 → 바로 챗봇이 추가 탐색 질문
-                st.session_state.chat_log.append(("assistant", script[5]))
+            if "없" in normalized:
+                # 수정 없음 → 추가 탐색 단계
                 st.session_state.step_index = 5
+                st.session_state.step4_shown = False
             else:
-                # 수정 있음 → 다시 추천
+                # 수정 있음 → 다시 상품 제안
                 st.session_state.user_condition = user_input
                 st.session_state.step_index = 3
+                st.session_state.step4_shown = False
 
             st.rerun()
 
-        # ---------------- STEP 5 추가 탐색 여부 ----------------
+
+        # ---------------- STEP 5 추가 탐색 ----------------
         elif st.session_state.step_index == 5:
 
-            user_input = st.chat_input("계속 탐색하시겠습니까?")
+            # 멘트 한 번만 출력
+            if not st.session_state.get("step5_shown"):
+                st.session_state.chat_log.append(("assistant", script[5]))
+                st.session_state.step5_shown = True
+                st.rerun()
+
+            user_input = st.chat_input(script[5])
+            if not user_input:
+                st.stop()
+
+            st.session_state.chat_log.append(("user", user_input))
+            normalized = user_input.strip()
+
+            if any(word in normalized for word in ["아니", "그만", "종료", "괜찮"]):
+                # 탐색 종료 → 결정 단계
+                st.session_state.step_index = 6
+                st.session_state.step5_shown = False
+            else:
+                # 계속 탐색 → 다시 상품 제안
+                st.session_state.step_index = 3
+                st.session_state.step5_shown = False
+
+            st.rerun()
+
+
+        # ---------------- STEP 6 결정 단계 ----------------
+        elif st.session_state.step_index == 6:
+
+            # 멘트 한 번만 출력
+            if not st.session_state.get("step6_shown"):
+                st.session_state.chat_log.append(("assistant", script[6]))
+                st.session_state.step6_shown = True
+                st.rerun()
+
+            user_input = st.chat_input(script[6])
             if not user_input:
                 st.stop()
 
             st.session_state.chat_log.append(("user", user_input))
 
-            normalized = user_input.strip()
-
-            if normalized in ["아니요", "아니", "그만", "종료", "괜찮아요"]:
-                st.session_state.step_index = 6
-            else:
-                st.session_state.step_index = 3
-
+            # 선택 완료 → 종료 단계
+            st.session_state.step_index = 7
+            st.session_state.step6_shown = False
             st.rerun()
 
-        # ---------------- STEP 6 종료 ----------------
-        elif st.session_state.step_index == 6:
 
-            st.session_state.chat_log.append(("assistant", script[6]))
-            st.session_state.phase = "consent"
-            st.rerun()
-        
+        # ---------------- STEP 7 종료 ----------------
+        elif st.session_state.step_index == 7:
+
+            if not st.session_state.get("step7_shown"):
+                st.session_state.chat_log.append(("assistant", script[7]))
+                st.session_state.step7_shown = True
+                st.rerun()
+
+            st.stop()
+
 # --------------------------------------------------
 # 파트 4: 설문 + Google Sheets 저장
 # --------------------------------------------------
