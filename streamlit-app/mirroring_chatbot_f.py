@@ -592,23 +592,47 @@ elif st.session_state.phase == "conversation":
         # ---------------- STEP 2 조건 입력 ----------------
         elif st.session_state.step_index == 2:
 
-            if "step2_shown" not in st.session_state:
+        # STEP2 멘트는 한 번만 출력
+            if st.session_state.get("step2_shown") != True:
                 st.session_state.chat_log.append(("assistant", script[2]))
                 st.session_state.step2_shown = True
+                st.rerun()
 
-            user_input = st.chat_input("조건을 입력하세요.")
+            user_input = st.chat_input("여행 일정, 예산, 원하는 지역을 입력하세요.")
             if not user_input:
                 st.stop()
 
             st.session_state.chat_log.append(("user", user_input))
-            st.session_state.user_condition = user_input
 
+        # 🔥 조건 충분성 검사 (GPT 사용)
+        validation = client.chat.completions.create(
+            model="gpt-4o",
+            temperature=0,
+            messages=[
+                {
+                    "role": "system",
+                    "content": "사용자의 입력에 여행 일정, 예산, 지역이 모두 포함되어 있으면 '충분', 아니면 '부족'만 답하십시오."
+                },
+                {
+                    "role": "user",
+                    "content": user_input
+                }
+            ]
+        )
+
+        result = validation.choices[0].message.content.strip()
+
+        if result == "충분":
+            st.session_state.user_condition = user_input
             st.session_state.step_index = 3
-            st.rerun()
+        else:
+            st.session_state.chat_log.append(("assistant", "여행 일정, 예산, 원하는 지역을 모두 포함해 주세요."))
+
+        st.rerun()
 
         # ---------------- STEP 3 상품 제안 ----------------
         elif st.session_state.step_index == 3:
-
+        
             response = client.chat.completions.create(
                 model="gpt-4o",
                 temperature=0.5,
