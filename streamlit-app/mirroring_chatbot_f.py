@@ -596,14 +596,24 @@ elif st.session_state.phase == "conversation":
         # STEP 2: 조건 제시 요청
         # ----------------------------
         elif st.session_state.step_index == 2:
-            st.session_state.chat_log.append(("assistant", script[2]))
-            
+
+            # 🔒 처음 진입할 때만 출력
+            if st.session_state.get("current_step") != 2:
+                st.session_state.chat_log.append(("assistant", script[2]))
+                st.session_state.current_step = 2
+                st.rerun()
+
             user_input = st.chat_input("조건을 입력하세요.")
             if not user_input:
                 st.stop()
-                
+
+            if len(user_input.strip()) < 5:
+                st.session_state.chat_log.append(("assistant", "여행 조건을 조금 더 구체적으로 입력해 주세요."))
+                st.rerun()
+
             st.session_state.chat_log.append(("user", user_input))
             st.session_state.user_condition = user_input
+
             st.session_state.step_index = 3
             st.rerun()
 
