@@ -683,14 +683,29 @@ elif st.session_state.phase == "conversation":
             if intent == "거절":
 
                 if st.session_state.tone == "격식체":
-                    msg = "심사 요청이 접수되지 않았습니다."
+                    msg = (
+                    "현재 기준에 따르면 취소 시 수수료 75만 원이 적용됩니다.\n"
+                    "다만, 예외 적용 사유에 해당하는 경우에는 별도 심사가 가능합니다.\n"
+                    "심사 요청 여부를 다시 한번 결정하시겠습니까?"
+                )
+
                 elif st.session_state.tone == "해요체":
-                    msg = "심사 요청은 진행되지 않았어요."
+                    msg = (
+                        "지금 기준으로는 취소하면 수수료 75만 원이 적용돼요.\n"
+                        "다만, 예외 사유에 해당하면 별도 심사가 가능해요.\n"
+                        "심사 요청할지 다시 한번 결정해 보실래요?"
+                    )
+
                 else:
-                    msg = "심사 요청 안 한 걸로 처리할게."
+                    msg = (
+                        "지금 기준이면 취소하면 수수료 75만 원이 적용돼.\n"
+                        "예외 사유면 따로 심사 가능해.\n"
+                        "심사 요청할지 다시 정해."
+                    )
 
                 st.session_state.chat_log.append(("assistant", msg))
-                st.session_state.phase = "consent"
+
+                # 🔥 STEP 유지 (중요)
                 st.rerun()
 
             # 🔴 2. 요청했지만 예외 아님
