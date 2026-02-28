@@ -654,11 +654,16 @@ elif st.session_state.phase == "conversation":
 
             reply = response.choices[0].message.content.strip()
 
+            # 옵션 제안 멘트
             st.session_state.chat_log.append(("assistant", script[3]))
+
+            # GPT 생성 상품
             st.session_state.chat_log.append(("assistant", reply))
+
+            # STEP4로 이동
+            st.session_state.step_index = 4
             st.session_state.chat_log.append(("assistant", script[4]))
 
-            st.session_state.step_index = 4
             st.rerun()
 
         # ---------------- STEP 4 수정 요청 ----------------
