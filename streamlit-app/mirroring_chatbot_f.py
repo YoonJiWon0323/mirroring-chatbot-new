@@ -520,6 +520,10 @@ elif st.session_state.phase == "conversation":
                 st.stop()
 
             st.session_state.chat_log.append(("user", user_input))
+
+            # 🔥 이 줄 반드시 추가
+            st.session_state.refund_reason = user_input
+
             st.session_state.step_index = 3
             st.rerun()
 
@@ -534,11 +538,71 @@ elif st.session_state.phase == "conversation":
                 st.rerun()
 
 
-        # ---------------- STEP 4 협상 ----------------
+        # ---------------- STEP 4 협상 (예외 판단 포함) ----------------
         elif st.session_state.step_index == 4:
 
             if "step4_done" not in st.session_state:
-                st.session_state.chat_log.append(("assistant", script[4]))
+
+                reason = st.session_state.get("refund_reason", "")
+
+                # 예외 조건 키워드 검사
+                health_keywords = ["입원", "병원", "수술", "건강", "사망"]
+                disaster_keywords = ["태풍", "지진", "폭설", "홍수", "천재지변"]
+                airline_keywords = ["항공사", "결항", "운항 취소", "일정 변경"]
+
+                is_exception = (
+                    any(k in reason for k in health_keywords) or
+                    any(k in reason for k in disaster_keywords) or
+                    any(k in reason for k in airline_keywords)
+                )
+
+                # SCRIPT 기반 템플릿 선택
+                if st.session_state.tone == "격식체":
+                    if is_exception:
+                        exception_msg = (
+                            "예외 적용은 다음과 같은 사유에 한하여 검토됩니다.\n"
+                            "1. 본인 또는 직계 가족의 중대한 건강상 사유\n"
+                            "2. 천재지변 등 불가항력적 상황\n"
+                            "3. 항공사 측의 운항 변경 또는 취소\n"
+                            "해당 사유에 해당하는 경우에 한하여 추가 검토가 가능합니다."
+                        )
+                    else:
+                        exception_msg = (
+                            "입력하신 사유는 예외 적용 대상에 해당하지 않습니다.\n"
+                            "규정에 따라 수수료가 부과됩니다."
+                        )
+
+                elif st.session_state.tone == "해요체":
+                    if is_exception:
+                        exception_msg = (
+                            "예외 적용은 보통 다음과 같은 경우에 검토해요.\n"
+                            "1. 본인이나 직계 가족의 중대한 건강 문제\n"
+                            "2. 천재지변 같은 불가항력 상황\n"
+                            "3. 항공사 사정으로 일정이 변경되거나 취소된 경우\n"
+                            "이런 경우에 해당하면 추가 검토가 가능해요."
+                        )
+                    else:
+                        exception_msg = (
+                            "입력하신 사유는 예외 적용 대상이 아니에요.\n"
+                            "규정에 따라 수수료가 발생해요."
+                        )
+
+                else:  # 반말
+                    if is_exception:
+                        exception_msg = (
+                            "예외 적용은 다음 경우에만 검토돼.\n"
+                            "1. 본인이나 직계 가족의 중대한 건강 문제\n"
+                            "2. 천재지변 같은 불가항력 상황\n"
+                            "3. 항공사 일정 변경 또는 취소\n"
+                            "이런 경우에 해당하면 추가 검토가 가능해."
+                        )
+                    else:
+                        exception_msg = (
+                            "입력한 사유는 예외 대상이 아니야.\n"
+                            "수수료는 그대로 발생해."
+                        )
+
+                st.session_state.chat_log.append(("assistant", exception_msg))
                 st.session_state.step4_done = True
                 st.session_state.step_index = 5
                 st.rerun()
