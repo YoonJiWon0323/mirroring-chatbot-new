@@ -12,9 +12,9 @@ from google.oauth2.service_account import Credentials
 # 1️⃣ 페이지 설정
 st.set_page_config(page_title="Mirroring Chatbot", layout="centered")
 
-# 2️⃣ Google Sheets + OpenAI 연결 캐싱
+# 2️⃣ Google Sheets 연결 캐싱
 @st.cache_resource
-def connect_services():
+def connect_sheets():
     scope = [
         "https://spreadsheets.google.com/feeds",
         "https://www.googleapis.com/auth/drive"
@@ -24,17 +24,75 @@ def connect_services():
         scopes=scope
     )
     gc = gspread.authorize(creds)
-
     spreadsheet = gc.open_by_key("1TSfKYISlyU7tweTqIIuwXbgY43xt1POckUa4DSbeHJo")
+
     survey_ws = spreadsheet.worksheet("survey")
     conversation_ws = spreadsheet.worksheet("conversation")
 
-    client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+    return survey_ws, conversation_ws
 
-    return survey_ws, conversation_ws, client
+survey_ws, conversation_ws = connect_sheets()
 
+# 3️⃣ OpenAI
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-survey_ws, conversation_ws, client = connect_services()
+# 4️⃣ 헤더 자동 삽입 (1회만 실행)
+def insert_headers_if_empty(worksheet, headers):
+    if "header_checked" not in st.session_state:
+        try:
+            first_cell = worksheet.get("A1")  # 단일 셀만 읽기
+
+            if not first_cell:
+                worksheet.append_row(headers)
+
+            st.session_state.header_checked = True
+
+        except Exception as e:
+            if "429" in str(e):
+                import time
+                time.sleep(2)
+            else:
+                st.error(f"헤더 오류: {e}")
+
+# 시트 연결
+insert_headers_if_empty(survey_ws, [
+    "timestamp",
+    "user_id",
+
+    # 실험 조건
+    "scenario",
+    "tone",
+
+    # 인구통계
+    "gender",
+    "age",
+    "education",
+    "job",
+
+    # 조작점검
+    "power1","power2","power3",
+    "tone1","tone2","tone3",
+
+    # 종속
+    "sat1","sat2","sat3",
+
+    # 매개
+    "app1","app2","app3",
+
+    # 통제
+    "rude1","rude2",
+    "comp1","comp2","comp3",
+
+    # AI 노출
+    "exp1","exp2","exp3","exp4"
+])
+
+insert_headers_if_empty(conversation_ws, [
+    "timestamp",
+    "user_id",
+    "role",
+    "message"
+])
 
 # --------------------------------------------------
 # 세션 초기화
@@ -418,90 +476,108 @@ elif st.session_state.phase == "scenario":
 # ==================================================
 elif st.session_state.phase == "conversation":
 
-    # 기존 대화 출력
     for role, message in st.session_state.chat_log:
         st.chat_message(role).write(message)
 
+    key = f"{st.session_state.scenario}_{st.session_state.tone}"
+    script = SCRIPT[key]
+
     # ==================================================
-    # 🔵 REFUND SCENARIO (SCRIPT 유지 + 절차 정확 통제)
+    # 🔵 REFUND 시나리오 (절차 0~6 완전 고정)
     # ==================================================
     if st.session_state.scenario == "refund":
 
-        script = SCRIPT[f"refund_{st.session_state.tone}"]
-
-        # ---------------- STEP 0 안내 ----------------
+        # ---------------- STEP 0 접속 ----------------
         if st.session_state.step_index == 0:
 
-            if "intro_done" not in st.session_state:
+            if "step0_done" not in st.session_state:
                 st.session_state.chat_log.append(("assistant", script[0]))
-                st.session_state.chat_log.append(("assistant", script[1]))
-                st.session_state.chat_log.append(("assistant", script[2]))
-                st.session_state.intro_done = True
-
-            st.session_state.step_index = 1
-
-
-        # ---------------- STEP 1 사유 입력 ----------------
-        if st.session_state.step_index == 1:
-
-            user_input = st.chat_input(script[2])  # 🔥 SCRIPT 문구 그대로 사용
-
-            if user_input:
-                st.session_state.chat_log.append(("user", user_input))
-
-                if len(user_input.strip()) < 20:
-                    # 다시 SCRIPT 안내 반복
-                    st.session_state.chat_log.append(("assistant", script[2]))
-                else:
-                    # 규정 안내 (SCRIPT 유지)
-                    st.session_state.chat_log.append(("assistant", script[3]))
-                    st.session_state.step_index = 2
-
+                st.session_state.step0_done = True
+                st.session_state.step_index = 1
                 st.rerun()
 
-    # ==================================================
-    # STEP 2: 규정 확인 및 예외 가능 여부 문의
-    # ==================================================
-    elif st.session_state.step_index == 2:
 
-        user_input = st.chat_input("규정을 확인한 후 질문하십시오.")
-        if not user_input:
-            st.stop()
+        # ---------------- STEP 1 시작 ----------------
+        elif st.session_state.step_index == 1:
 
-        st.session_state.chat_log.append(("user", user_input))
+            if "step1_done" not in st.session_state:
+                st.session_state.chat_log.append(("assistant", script[1]))
+                st.session_state.step1_done = True
+                st.session_state.step_index = 2
+                st.rerun()
 
-        # 질문 여부 간단 확인
-        if not any(k in user_input for k in ["?", "적용", "가능", "예외"]):
-            st.session_state.chat_log.append(("assistant", script[4]))
+
+        # ---------------- STEP 2 사유 ----------------
+        elif st.session_state.step_index == 2:
+
+            if "step2_prompted" not in st.session_state:
+                st.session_state.chat_log.append(("assistant", script[2]))
+                st.session_state.step2_prompted = True
+                st.rerun()
+
+            user_input = st.chat_input(script[2])
+            if not user_input:
+                st.stop()
+
+            st.session_state.chat_log.append(("user", user_input))
+            st.session_state.step_index = 3
             st.rerun()
 
-        # 예외 안내 (SCRIPT 유지)
-        st.session_state.chat_log.append(("assistant", script[4]))
-        st.session_state.step_index = 3
-        st.rerun()
 
-    # ==================================================
-    # STEP 3: 최종 심사 요청
-    # ==================================================
-    elif st.session_state.step_index == 3:
+        # ---------------- STEP 3 규정 ----------------
+        elif st.session_state.step_index == 3:
 
-        user_input = st.chat_input("최종 심사 요청 메시지를 작성하십시오.")
-        if not user_input:
-            st.stop()
+            if "step3_done" not in st.session_state:
+                st.session_state.chat_log.append(("assistant", script[3]))
+                st.session_state.step3_done = True
+                st.session_state.step_index = 4
+                st.rerun()
 
-        st.session_state.chat_log.append(("user", user_input))
 
-        if not any(k in user_input for k in ["심사", "요청", "진행"]):
-            st.session_state.chat_log.append(("assistant", script[5]))
+        # ---------------- STEP 4 협상 ----------------
+        elif st.session_state.step_index == 4:
+
+            if "step4_done" not in st.session_state:
+                st.session_state.chat_log.append(("assistant", script[4]))
+                st.session_state.step4_done = True
+                st.session_state.step_index = 5
+                st.rerun()
+
+
+        # ---------------- STEP 5 요청 ----------------
+        elif st.session_state.step_index == 5:
+
+            if "step5_prompted" not in st.session_state:
+                st.session_state.chat_log.append(("assistant", script[5]))
+                st.session_state.step5_prompted = True
+                st.rerun()
+
+            user_input = st.chat_input(script[5])
+            if not user_input:
+                st.stop()
+
+            st.session_state.chat_log.append(("user", user_input))
+            st.session_state.step_index = 6
             st.rerun()
 
-        # 최종 승인 대기 (SCRIPT 유지)
-        st.session_state.chat_log.append(("assistant", script[6]))
-        st.chat_message("assistant").write(script[6])
+        # ---------------- STEP 6 종료 ----------------
+        elif st.session_state.step_index == 6:
 
-        time.sleep(2)
-        st.session_state.phase = "consent"
-        st.rerun()
+            if "step6_done" not in st.session_state:
+                st.session_state.chat_log.append(("assistant", script[6]))
+                st.session_state.step6_done = True
+                st.rerun()
+
+            # 3초 유지 후 설문 이동
+            if "end_time" not in st.session_state:
+                st.session_state.end_time = time.time()
+
+            if time.time() - st.session_state.end_time < 3:
+                time.sleep(0.5)
+                st.rerun()
+
+            st.session_state.phase = "consent"
+            st.rerun()
 
     # ==================================================
     # RECOMMEND SCENARIO (유연 통제형 구조)
@@ -709,35 +785,30 @@ elif st.session_state.phase == "conversation":
         # ---------------- STEP 6 결정 ----------------
         elif st.session_state.step_index == 6:
 
-            if "final_input_received" not in st.session_state:
+            user_input = st.chat_input(script[6])
+            if not user_input:
+                st.stop()
 
-                user_input = st.chat_input(script[6])
-                if not user_input:
-                    st.stop()
+            st.session_state.chat_log.append(("user", user_input))
 
-                st.session_state.chat_log.append(("user", user_input))
-                st.session_state.final_input_received = True
-                st.session_state.step_index = 7
-                st.rerun()
+            st.session_state.step_index = 7
+            st.rerun()
 
 
         # ---------------- STEP 7 종료 (5초 유지) ----------------
         elif st.session_state.step_index == 7:
 
-            # 최초 진입 시 메시지 출력 + 시작시간 저장
+            # 최초 진입
             if "end_time" not in st.session_state:
                 st.session_state.chat_log.append(("assistant", script[7]))
                 st.session_state.end_time = time.time()
                 st.rerun()
 
-            # 3초 미만이면 0.5초 후 다시 실행
-            elapsed = time.time() - st.session_state.end_time
+            # 5초 유지
+            if time.time() - st.session_state.end_time < 5:
+                st.stop()
 
-            if elapsed < 3:
-                time.sleep(0.5)
-                st.rerun()
-
-            # 3초 지나면 설문 이동
+            # 🔥 5초 후 설문 이동
             del st.session_state.end_time
             st.session_state.phase = "consent"
             st.rerun()
