@@ -573,43 +573,32 @@ elif st.session_state.phase == "conversation":
     # RECOMMEND SCENARIO (유연 통제형 구조)
     # ==================================================
     elif st.session_state.scenario == "recommend":
+
         key = f"recommend_{st.session_state.tone}"
         script = SCRIPT[key]
-        
-        # ----------------------------
-        # STEP 0: 접속
-        # ----------------------------
+
+        # ---------------- STEP 0 ----------------
         if st.session_state.step_index == 0:
             st.session_state.chat_log.append(("assistant", script[0]))
             st.session_state.step_index = 1
             st.rerun()
 
-        # ----------------------------
-        # STEP 1: 시작
-        # ----------------------------
+        # ---------------- STEP 1 ----------------
         elif st.session_state.step_index == 1:
             st.session_state.chat_log.append(("assistant", script[1]))
             st.session_state.step_index = 2
             st.rerun()
 
-        # ----------------------------
-        # STEP 2: 조건 제시 요청
-        # ----------------------------
+        # ---------------- STEP 2 조건 입력 ----------------
         elif st.session_state.step_index == 2:
 
-            # 🔒 처음 진입할 때만 출력
-            if st.session_state.get("current_step") != 2:
+            if "step2_shown" not in st.session_state:
                 st.session_state.chat_log.append(("assistant", script[2]))
-                st.session_state.current_step = 2
-                st.rerun()
+                st.session_state.step2_shown = True
 
             user_input = st.chat_input("조건을 입력하세요.")
             if not user_input:
                 st.stop()
-
-            if len(user_input.strip()) < 5:
-                st.session_state.chat_log.append(("assistant", "여행 조건을 조금 더 구체적으로 입력해 주세요."))
-                st.rerun()
 
             st.session_state.chat_log.append(("user", user_input))
             st.session_state.user_condition = user_input
@@ -617,111 +606,95 @@ elif st.session_state.phase == "conversation":
             st.session_state.step_index = 3
             st.rerun()
 
-        # ----------------------------
-        # STEP 3: 옵션 제안
-        # ----------------------------
+        # ---------------- STEP 3 상품 제안 ----------------
         elif st.session_state.step_index == 3:
-
-            st.session_state.chat_log.append(("assistant", script[3]))
 
             response = client.chat.completions.create(
                 model="gpt-4o",
                 temperature=0.5,
                 messages=[
-                    {
-                        "role": "system",
-                        "content": "사용자의 조건에 맞는 여행 상품 2개를 제시하십시오."
-                    },
-                    {
-                        "role": "user",
-                        "content": st.session_state.user_condition
-                    }
+                    {"role": "system",
+                    "content": "사용자의 조건에 맞는 여행 상품 2개를 제시하십시오. 인사말은 하지 마십시오."},
+                    {"role": "user",
+                    "content": st.session_state.user_condition}
                 ]
             )
 
             reply = response.choices[0].message.content.strip()
-            st.session_state.chat_log.append(("assistant", reply))
 
-            # 🔥 여기서 바로 수정 안내 출력
+            st.session_state.chat_log.append(("assistant", script[3]))
+            st.session_state.chat_log.append(("assistant", reply))
             st.session_state.chat_log.append(("assistant", script[4]))
 
             st.session_state.step_index = 4
             st.rerun()
-            
-        # ----------------------------
-        # STEP 4: 수정 요청
-        # ----------------------------
+
+        # ---------------- STEP 4 수정 여부 판단 ----------------
         elif st.session_state.step_index == 4:
-                st.session_state.chat_log.append(("assistant", script[4]))
 
-                user_input = st.chat_input("수정 내용을 입력하세요.")
-                if not user_input:
-                    st.stop()
-
-                st.session_state.chat_log.append(("user", user_input))
-                st.session_state.user_condition = user_input
-                st.session_state.step_index = 3
-                st.rerun()
-
-        # ----------------------------
-        # STEP 5: 추가 탐색 여부 (GPT 판단)
-        # ----------------------------
-        elif st.session_state.step_index == 5:
-
-            st.session_state.chat_log.append(("assistant", script[5]))
-
-            user_input = st.chat_input("추가 탐색 여부를 입력하세요.")
+            user_input = st.chat_input("수정 사항이 있으면 입력하세요. 없으면 '없음'이라고 입력하세요.")
             if not user_input:
                 st.stop()
 
             st.session_state.chat_log.append(("user", user_input))
 
-            # 🔥 GPT가 종료/계속 판단
+            # 🔥 GPT 의도 판단
             classification = client.chat.completions.create(
                 model="gpt-4o",
                 temperature=0,
                 messages=[
-                    {
-                        "role": "system",
-                        "content": "사용자의 문장이 탐색 종료 의사인지 추가 탐색 의사인지 판단하여 '종료' 또는 '계속' 중 하나만 답하십시오."
-                    },
-                    {
-                        "role": "user",
-                        "content": user_input
-                    }
+                    {"role": "system",
+                     "content": "사용자가 수정 요청을 하는지 아니면 수정이 없다고 하는지 판단하여 '수정' 또는 '없음' 중 하나만 답하십시오."},
+                    {"role": "user",
+                    "content": user_input}
                 ]
             )
 
             intent = classification.choices[0].message.content.strip()
 
-            if intent == "종료":
-                st.session_state.step_index = 6
-            else:
+            if intent == "수정":
+                st.session_state.user_condition = user_input
                 st.session_state.step_index = 3
+            else:
+                st.session_state.step_index = 5
 
             st.rerun()
 
-        # ----------------------------
-        # STEP 6: 결정 단계
-        # ----------------------------
-        elif st.session_state.step_index == 6:
+        # ---------------- STEP 5 추가 탐색 여부 ----------------
+        elif st.session_state.step_index == 5:
 
-            st.session_state.chat_log.append(("assistant", script[6]))
+            st.session_state.chat_log.append(("assistant", script[5]))
 
-            user_input = st.chat_input("선택 여부를 입력하세요.")
+            user_input = st.chat_input("계속 탐색하시겠습니까?")
             if not user_input:
                 st.stop()
 
             st.session_state.chat_log.append(("user", user_input))
-            st.session_state.step_index = 7
+
+            classification = client.chat.completions.create(
+                model="gpt-4o",
+                temperature=0,
+                messages=[
+                    {"role": "system",
+                     "content": "사용자가 탐색을 종료하는지 계속하는지 판단하여 '종료' 또는 '계속' 중 하나만 답하십시오."},
+                    {"role": "user",
+                    "content": user_input}
+                ]
+            )
+
+            intent = classification.choices[0].message.content.strip()
+
+            if intent == "계속":
+                st.session_state.step_index = 3
+            else:
+                st.session_state.step_index = 6
+
             st.rerun()
 
-        # ----------------------------
-        # STEP 7: 종료
-        # ----------------------------
-        elif st.session_state.step_index == 7:
+        # ---------------- STEP 6 종료 ----------------
+        elif st.session_state.step_index == 6:
 
-            st.session_state.chat_log.append(("assistant", script[7]))
+            st.session_state.chat_log.append(("assistant", script[6]))
             st.session_state.phase = "consent"
             st.rerun()
         
