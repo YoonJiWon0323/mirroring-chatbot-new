@@ -635,10 +635,18 @@ elif st.session_state.phase == "conversation":
         
             response = client.chat.completions.create(
                 model="gpt-4o",
-                temperature=0.5,
+                temperature=0.9,
                 messages=[
                     {"role": "system",
-                    "content": "사용자의 조건에 맞는 여행 상품 2개를 제시하십시오. 인사말은 하지 마십시오."},
+                     "content": f"""
+                     사용자의 조건을 반드시 반영하여 여행 상품 2개를 제시하십시오.
+                     조건:
+                    - 일정과 예산을 반드시 반영하십시오.
+                    - 이전에 제시한 지역은 다시 사용하지 마십시오.
+                    - 최대한 다양한 국가 또는 도시를 제시하십시오.
+                    - 인사말은 작성하지 마십시오.
+                    """
+                    },
                     {"role": "user",
                     "content": st.session_state.user_condition}
                 ]
