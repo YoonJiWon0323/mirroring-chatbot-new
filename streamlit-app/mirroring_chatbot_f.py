@@ -9,6 +9,7 @@ import gspread
 import random
 from google.oauth2.service_account import Credentials
 
+🔥 완전 안정 버전
 # 1️⃣ 페이지 설정
 st.set_page_config(page_title="Mirroring Chatbot", layout="centered")
 
@@ -418,18 +419,18 @@ elif st.session_state.phase == "scenario":
 # ==================================================
 elif st.session_state.phase == "conversation":
 
+    # 기존 대화 출력
     for role, message in st.session_state.chat_log:
         st.chat_message(role).write(message)
 
-    key = f"{st.session_state.scenario}_{st.session_state.tone}"
-    script = SCRIPT[key]
-
     # ==================================================
-    # 🔵 REFUND 시나리오 (단계 완전 분리)
+    # 🔵 REFUND SCENARIO (완전 분리 안정 버전)
     # ==================================================
     if st.session_state.scenario == "refund":
 
-        # STEP 0: 접속 안내
+        script = SCRIPT[f"refund_{st.session_state.tone}"]
+
+        # ---------------- STEP 0 안내 ----------------
         if st.session_state.step_index == 0:
             st.session_state.chat_log.append(("assistant", script[0]))
             st.session_state.chat_log.append(("assistant", script[1]))
@@ -437,56 +438,28 @@ elif st.session_state.phase == "conversation":
             st.session_state.step_index = 1
             st.rerun()
 
-        user_input = st.chat_input("메시지를 입력하십시오.")
-        if not user_input:
-            st.stop()
+        # ---------------- STEP 1 취소 사유 입력 ----------------
+        elif st.session_state.step_index == 1:
 
-        st.session_state.chat_log.append(("user", user_input))
+            user_input = st.chat_input("취소 사유를 입력하십시오.")
+            if not user_input:
+                st.stop()
 
-        # ==================================================
-        # STEP 1: 규정 고지 (수수료만)
-        # ==================================================
-        if st.session_state.step_index == 1:
+            st.session_state.chat_log.append(("user", user_input))
 
-            regulation_msg = script[3]  # "수수료 75만 원..."
-
-            st.session_state.chat_log.append(("assistant", regulation_msg))
-
+            # 규정 안내
+            st.session_state.chat_log.append(("assistant", script[3]))
             st.session_state.step_index = 2
             st.rerun()
 
-        # --------------------------------------------------
-        # STEP 2: 조건 수집 단계 (유연 응답)
-        # --------------------------------------------------
+        # ---------------- STEP 2 심사 요청 여부 ----------------
         elif st.session_state.step_index == 2:
 
-            # 처음 진입 시 안내문 한 번만 출력
-            if "condition_prompted" not in st.session_state:
-                st.session_state.chat_log.append(("assistant", script[2]))
-                st.session_state.condition_prompted = True
+            user_input = st.chat_input("심사 요청 여부를 입력하십시오.")
+            if not user_input:
+                st.stop()
 
-            # 채팅 입력창은 항상 그려줘야 함
-            user_input = st.chat_input("조건을 입력하세요.")
-
-            if user_input:
-                st.session_state.chat_log.append(("user", user_input))
-
-            has_budget = any(k in user_input for k in ["원", "만원"])
-            has_duration = any(k in user_input for k in ["박", "일"])
-
-            if not has_budget:
-                st.session_state.chat_log.append(("assistant", "예산을 숫자로 포함해 주세요."))
-            elif not has_duration:
-                st.session_state.chat_log.append(("assistant", "여행 일정도 함께 알려 주세요."))
-            else:
-                st.session_state.user_condition = user_input
-                st.session_state.step_index = 3
-            st.rerun()
-
-        # ==================================================
-        # STEP 3: 심사 요청 여부 확인 (단독 단계)
-        # ==================================================
-        elif st.session_state.step_index == 3:
+            st.session_state.chat_log.append(("user", user_input))
 
             decision_keywords = [
                 "요청", "진행", "심사", "확정",
@@ -495,18 +468,16 @@ elif st.session_state.phase == "conversation":
 
             if any(k in user_input for k in decision_keywords):
 
-                final_msg = script[6]  # "심사 승인 대기 처리..."
+                final_msg = script[6]
                 st.session_state.chat_log.append(("assistant", final_msg))
                 st.chat_message("assistant").write(final_msg)
 
-                with st.spinner("심사 결과 처리 중..."):
-                    time.sleep(2)
+                time.sleep(2)
 
                 st.session_state.phase = "consent"
                 st.rerun()
 
             else:
-                # 다시 한 번 요청 여부만 질문
                 if st.session_state.tone == "격식체":
                     ask_msg = "심사 요청 여부를 확정하십시오."
                 elif st.session_state.tone == "해요체":
