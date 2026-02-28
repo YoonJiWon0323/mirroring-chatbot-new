@@ -433,6 +433,35 @@ def analyze_user_intent(user_input):
         "decline": "YES" in text.splitlines()[2],
     }
 
+def classify_intent_single(user_input):
+
+    judge_prompt = f"""
+다음 사용자 발화를 하나의 의도로만 분류하십시오.
+
+반드시 아래 네 가지 중 하나만 출력하십시오:
+
+요청  → 심사를 진행해 달라는 명확한 의사 표현
+거절  → 심사를 진행하지 않겠다는 명확한 의사 표현
+질문  → 규정, 예외 기준 등에 대한 질문
+기타  → 위 세 가지에 해당하지 않는 모호한 발화
+
+다른 설명 없이 단어 하나만 출력하십시오.
+
+사용자 발화:
+{user_input}
+"""
+
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        temperature=0,
+        messages=[
+            {"role": "system", "content": "의도 분류만 수행하십시오."},
+            {"role": "user", "content": judge_prompt}
+        ]
+    )
+
+    return response.choices[0].message.content.strip()
+
 def check_step_completion(user_input, step_index, scenario):
 
     if scenario == "recommend":
@@ -957,8 +986,13 @@ elif st.session_state.phase == "conversation":
             st.rerun()
 
 
-        # ---------------- STEP 5 추가 탐색 ----------------
+        # ---------------- STEP 5 요청 (단일 라벨 구조) ----------------
         elif st.session_state.step_index == 5:
+
+            if "step5_prompted" not in st.session_state:
+                st.session_state.chat_log.append(("assistant", script[5]))
+                st.session_state.step5_prompted = True
+                st.rerun()
 
             user_input = st.chat_input(script[5])
             if not user_input:
@@ -966,36 +1000,69 @@ elif st.session_state.phase == "conversation":
 
             st.session_state.chat_log.append(("user", user_input))
 
-            classification = client.chat.completions.create(
-                model="gpt-4o",
-                temperature=0,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": (
-                            "사용자의 발화를 다음 중 하나로만 분류하십시오:\n"
-                            "1) 계속: 더 탐색을 원함\n"
-                            "2) 종료: 더 이상 탐색을 원하지 않음\n"
-                            "반드시 '계속' 또는 '종료' 중 하나만 답하십시오."
-                        )
-                    },
-                    {
-                        "role": "user",
-                        "content": user_input
-                    }
-                ]
-            )
+            intent = classify_intent_single(user_input)
 
-            intent = classification.choices[0].message.content.strip()
-
-            if intent == "계속":
-                st.session_state.step_index = 3
-            else:
+            # 🔹 1️⃣ 요청 → 바로 진행
+            if intent == "요청":
                 st.session_state.step_index = 6
-                st.session_state.chat_log.append(("assistant", script[6]))
+                st.rerun()
 
-            st.rerun()
+            # 🔹 2️⃣ 거절 → 종료 확인
+            elif intent == "거절":
 
+                if st.session_state.tone == "격식체":
+                    msg = "심사 요청 없이 종료하시겠습니까?"
+                elif st.session_state.tone == "해요체":
+                    msg = "심사 요청 없이 종료할까요?"
+                else:
+                    msg = "그냥 종료할 거야?"
+
+                st.session_state.chat_log.append(("assistant", msg))
+                st.rerun()
+
+            # 🔹 3️⃣ 질문 → 예외 기준 안내
+            elif intent == "질문":
+
+                if st.session_state.tone == "격식체":
+                    msg = (
+                        "예외 적용은 다음과 같은 사유에 한하여 검토됩니다.\n"
+                        "1. 본인 또는 직계 가족의 중대한 건강상 사유\n"
+                        "2. 천재지변 등 불가항력적 상황\n"
+                        "3. 항공사 측의 운항 변경 또는 취소\n"
+                        "해당 사유에 해당하는 경우에 한하여 추가 검토가 가능합니다."
+                    )
+                elif st.session_state.tone == "해요체":
+                    msg = (
+                        "예외 적용은 보통 다음과 같은 경우에 검토해요.\n"
+                        "1. 본인이나 직계 가족의 중대한 건강 문제\n"
+                        "2. 천재지변 같은 불가항력 상황\n"
+                        "3. 항공사 사정으로 일정이 변경되거나 취소된 경우\n"
+                        "이런 경우에 해당하면 추가 검토가 가능해요."
+                    )
+                else:
+                    msg = (
+                        "예외 적용은 다음 경우에만 검토돼.\n"
+                        "1. 본인이나 직계 가족의 중대한 건강 문제\n"
+                        "2. 천재지변 같은 불가항력 상황\n"
+                        "3. 항공사 일정 변경 또는 취소\n"
+                        "이런 경우에 해당하면 추가 검토가 가능해."
+                    )
+
+                st.session_state.chat_log.append(("assistant", msg))
+                st.rerun()
+
+            # 🔹 4️⃣ 기타 → 재확인
+            else:
+
+                if st.session_state.tone == "격식체":
+                    msg = "심사 요청 여부를 명확히 입력하십시오."
+                elif st.session_state.tone == "해요체":
+                    msg = "심사 요청할지 명확히 말씀해 주세요."
+                else:
+                    msg = "요청할 건지 아닌지 정확히 말해."
+
+                st.session_state.chat_log.append(("assistant", msg))
+                st.rerun()
 
         # ---------------- STEP 6 결정 ----------------
         elif st.session_state.step_index == 6:
