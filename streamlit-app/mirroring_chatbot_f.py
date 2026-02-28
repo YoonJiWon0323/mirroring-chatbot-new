@@ -9,7 +9,6 @@ import gspread
 import random
 from google.oauth2.service_account import Credentials
 
-🔥 완전 안정 버전
 # 1️⃣ 페이지 설정
 st.set_page_config(page_title="Mirroring Chatbot", layout="centered")
 
