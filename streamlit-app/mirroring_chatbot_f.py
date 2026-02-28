@@ -518,18 +518,17 @@ elif st.session_state.phase == "conversation":
             if user_input:
                 st.session_state.chat_log.append(("user", user_input))
 
-             has_budget = any(k in user_input for k in ["원", "만원"])
-             has_duration = any(k in user_input for k in ["박", "일"])
+            has_budget = any(k in user_input for k in ["원", "만원"])
+            has_duration = any(k in user_input for k in ["박", "일"])
 
-             if not has_budget:
-                  st.session_state.chat_log.append(("assistant", "예산을 숫자로 포함해 주세요."))
-             elif not has_duration:
-                  st.session_state.chat_log.append(("assistant", "여행 일정도 함께 알려 주세요."))
-              else:
-                 st.session_state.user_condition = user_input
-                  st.session_state.step_index = 3
-
-             st.rerun()
+            if not has_budget:
+                st.session_state.chat_log.append(("assistant", "예산을 숫자로 포함해 주세요."))
+            elif not has_duration:
+                st.session_state.chat_log.append(("assistant", "여행 일정도 함께 알려 주세요."))
+            else:
+                st.session_state.user_condition = user_input
+                st.session_state.step_index = 3
+            st.rerun()
 
         # ==================================================
         # STEP 3: 심사 요청 여부 확인 (단독 단계)
