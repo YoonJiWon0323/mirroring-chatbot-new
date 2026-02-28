@@ -790,17 +790,20 @@ elif st.session_state.phase == "conversation":
         # ---------------- STEP 7 종료 (5초 유지) ----------------
         elif st.session_state.step_index == 7:
 
-            # 최초 진입
+            # 최초 진입 시 메시지 출력 + 시작시간 저장
             if "end_time" not in st.session_state:
                 st.session_state.chat_log.append(("assistant", script[7]))
                 st.session_state.end_time = time.time()
                 st.rerun()
 
-            # 5초 유지
-            if time.time() - st.session_state.end_time < 5:
-                st.stop()
+            # 3초 미만이면 0.5초 후 다시 실행
+            elapsed = time.time() - st.session_state.end_time
 
-            # 🔥 5초 후 설문 이동
+            if elapsed < 3:
+                time.sleep(0.5)
+                st.rerun()
+
+            # 3초 지나면 설문 이동
             del st.session_state.end_time
             st.session_state.phase = "consent"
             st.rerun()
