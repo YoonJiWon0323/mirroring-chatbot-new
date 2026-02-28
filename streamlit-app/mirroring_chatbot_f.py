@@ -363,6 +363,39 @@ def is_reason_sufficient(user_input):
 
     return answer == "YES"
 
+def classify_review_intent(user_input):
+
+    judge_prompt = f"""
+다음 사용자의 발화를 심사 요청 의도에 따라 분류하십시오.
+
+분류 기준은 다음 세 가지입니다:
+
+1. 요청: 심사를 진행해 달라고 명확히 요청함
+2. 거절: 심사를 진행하지 않겠다고 명확히 밝힘
+3. 불명확: 위 두 가지 중 어디에도 명확히 해당하지 않음
+
+반드시 아래 중 하나만 출력하십시오:
+
+요청
+거절
+불명확
+
+사용자 발화:
+{user_input}
+"""
+
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        temperature=0,
+        messages=[
+            {"role": "system", "content": "의도 분류만 수행하십시오. 다른 설명은 하지 마십시오."},
+            {"role": "user", "content": judge_prompt}
+        ]
+    )
+
+    return response.choices[0].message.content.strip()
+
+
 def check_step_completion(user_input, step_index, scenario):
 
     if scenario == "recommend":
@@ -643,17 +676,12 @@ elif st.session_state.phase == "conversation":
 
             st.session_state.chat_log.append(("user", user_input))
 
-            text = user_input.strip()
+            # 🔥 GPT 기반 요청 분류
+            intent = classify_review_intent(user_input)
 
-            # 🔥 요청 여부 판단
-            request_keywords = ["요청", "진행", "심사해", "해주세요", "해줘"]
-            decline_keywords = ["안", "안할", "취소", "안하겠"]
+            # 🔴 1. 거절
+            if intent == "거절":
 
-            is_request = any(k in text for k in request_keywords)
-            is_decline = any(k in text for k in decline_keywords)
-
-            # 🔴 요청 안 하는 경우
-            if is_decline:
                 if st.session_state.tone == "격식체":
                     msg = "심사 요청이 접수되지 않았습니다."
                 elif st.session_state.tone == "해요체":
@@ -665,8 +693,9 @@ elif st.session_state.phase == "conversation":
                 st.session_state.phase = "consent"
                 st.rerun()
 
-            # 🔴 예외 아닌데 요청하는 경우
-            if not st.session_state.get("is_exception", False):
+            # 🔴 2. 요청했지만 예외 아님
+            elif intent == "요청" and not st.session_state.get("is_exception", False):
+
                 if st.session_state.tone == "격식체":
                     msg = "해당 사유는 예외 대상이 아니므로 심사 요청이 불가합니다."
                 elif st.session_state.tone == "해요체":
@@ -678,13 +707,24 @@ elif st.session_state.phase == "conversation":
                 st.session_state.step_index = 2
                 st.rerun()
 
-            # 🟢 예외 + 요청함
-            if is_request and st.session_state.get("is_exception", False):
+            # 🟢 3. 요청 + 예외 대상
+            elif intent == "요청" and st.session_state.get("is_exception", False):
+
                 st.session_state.step_index = 6
                 st.rerun()
 
-            # 그 외 애매한 입력
-            st.rerun()
+            # 🔵 4. 불명확 입력
+            else:
+
+                if st.session_state.tone == "격식체":
+                    msg = "심사 요청 여부를 명확히 입력하십시오."
+                elif st.session_state.tone == "해요체":
+                    msg = "심사 요청할지 명확히 말씀해 주세요."
+                else:
+                    msg = "요청할 건지 아닌지 정확히 말해."
+
+                st.session_state.chat_log.append(("assistant", msg))
+                st.rerun()
 
         # ---------------- STEP 6 종료 ----------------
         elif st.session_state.step_index == 6:
