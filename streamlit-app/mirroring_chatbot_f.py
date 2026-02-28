@@ -630,7 +630,7 @@ elif st.session_state.phase == "conversation":
                 messages=[
                     {
                         "role": "system",
-                        "content": "사용자의 조건에 맞는 여행 상품 2개를 반드시 제시하십시오."
+                        "content": "사용자의 조건에 맞는 여행 상품 2개를 제시하십시오."
                     },
                     {
                         "role": "user",
@@ -642,9 +642,12 @@ elif st.session_state.phase == "conversation":
             reply = response.choices[0].message.content.strip()
             st.session_state.chat_log.append(("assistant", reply))
 
+            # 🔥 여기서 바로 수정 안내 출력
+            st.session_state.chat_log.append(("assistant", script[4]))
+
             st.session_state.step_index = 4
             st.rerun()
-
+            
         # ----------------------------
         # STEP 4: 수정 요청
         # ----------------------------
