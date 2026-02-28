@@ -602,7 +602,7 @@ elif st.session_state.phase == "conversation":
                 user_input = st.chat_input("조건을 입력하세요.")
 
                 if user_input:
-                    st.session_state.chat_log.append(("user", user_input))\
+                    st.session_state.chat_log.append(("user", user_input))
                 
                 has_budget = any(k in user_input for k in ["원", "만원"])
                 has_duration = any(k in user_input for k in ["박", "일"])
