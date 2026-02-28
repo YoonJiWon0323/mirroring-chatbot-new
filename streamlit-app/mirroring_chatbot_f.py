@@ -592,18 +592,18 @@ elif st.session_state.phase == "conversation":
         # STEP 2: 조건 수집 단계 (유연 응답)
         # --------------------------------------------------
         elif st.session_state.step_index == 2:
-
-        if "condition_prompted" not in st.session_state:
-            st.session_state.chat_log.append(("assistant", script[2]))
-            st.session_state.condition_prompted = True
             
-        user_input = st.chat_input("조건을 입력하세요.")
-        
-        if user_input:
-            st.session_state.chat_log.append(("user", user_input))
-            st.session_state.user_condition = user_input
-            st.session_state.step_index = 3
-            st.rerun()
+            if "condition_prompted" not in st.session_state:
+                st.session_state.chat_log.append(("assistant", script[2]))
+                st.session_state.condition_prompted = True
+                
+            user_input = st.chat_input("조건을 입력하세요.")
+            
+            if user_input:
+                st.session_state.chat_log.append(("user", user_input))
+                st.session_state.user_condition = user_input
+                st.session_state.step_index = 3
+                st.rerun()
 
         # --------------------------------------------------
         # STEP 3: 상품 제안 + 수정 대응 (유연)
