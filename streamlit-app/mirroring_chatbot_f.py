@@ -502,22 +502,34 @@ elif st.session_state.phase == "conversation":
             st.session_state.step_index = 2
             st.rerun()
 
-        # ==================================================
-        # STEP 2: 예외 가능성 안내 (구체 기준 직접 힌트 금지)
-        # ==================================================
+        # --------------------------------------------------
+        # STEP 2: 조건 수집 단계 (유연 응답)
+        # --------------------------------------------------
         elif st.session_state.step_index == 2:
 
-            if st.session_state.tone == "격식체":
-                msg = "다만, 내부 기준에 부합하는 경우 예외 적용이 검토될 수 있습니다. 관련 서류 제출 시 재심사가 가능합니다."
-            elif st.session_state.tone == "해요체":
-                msg = "다만, 내부 기준에 맞는 경우에는 예외 적용이 검토될 수 있어요. 관련 서류를 제출하면 재심사가 가능해요."
-            else:  # 반말체
-                msg = "다만, 내부 기준에 맞으면 예외 적용을 검토할 수 있어. 서류 내면 재심사 가능해."
+            # 처음 진입 시 안내문 한 번만 출력
+            if "condition_prompted" not in st.session_state:
+                st.session_state.chat_log.append(("assistant", script[2]))
+                st.session_state.condition_prompted = True
 
-            st.session_state.chat_log.append(("assistant", msg))
+            # 채팅 입력창은 항상 그려줘야 함
+            user_input = st.chat_input("조건을 입력하세요.")
 
-            st.session_state.step_index = 3
-            st.rerun()
+            if user_input:
+                st.session_state.chat_log.append(("user", user_input))
+
+                has_budget = any(k in user_input for k in ["원", "만원"])
+                has_duration = any(k in user_input for k in ["박", "일"])
+
+                if not has_budget:
+                    st.session_state.chat_log.append(("assistant", "예산을 숫자로 포함해 주세요."))
+                elif not has_duration:
+                    st.session_state.chat_log.append(("assistant", "여행 일정도 함께 알려 주세요."))
+                else:
+                    st.session_state.user_condition = user_input
+                    st.session_state.step_index = 3
+
+                st.rerun()
 
         # ==================================================
         # STEP 3: 심사 요청 여부 확인 (단독 단계)
