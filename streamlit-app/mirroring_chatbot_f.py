@@ -594,29 +594,29 @@ elif st.session_state.phase == "conversation":
         # --------------------------------------------------
         elif st.session_state.step_index == 2:
 
-        # 처음 진입 시 안내문 한 번만 출력
-        if "condition_prompted" not in st.session_state:
-            st.session_state.chat_log.append(("assistant", script[2]))
-            st.session_state.condition_prompted = True
+                # 처음 진입 시 안내문 한 번만 출력
+                if "condition_prompted" not in st.session_state:
+                    st.session_state.chat_log.append(("assistant", script[2]))
+                    st.session_state.condition_prompted = True
 
-        # 채팅 입력창은 항상 그려줘야 함
-        user_input = st.chat_input("조건을 입력하세요.")
+                # 채팅 입력창은 항상 그려줘야 함
+                user_input = st.chat_input("조건을 입력하세요.")
 
-        if user_input:
-            st.session_state.chat_log.append(("user", user_input))
+                if user_input:
+                    st.session_state.chat_log.append(("user", user_input))
     
-            has_budget = any(k in user_input for k in ["원", "만원"])
-            has_duration = any(k in user_input for k in ["박", "일"])
+                    has_budget = any(k in user_input for k in ["원", "만원"])
+                   has_duration = any(k in user_input for k in ["박", "일"])
 
-            if not has_budget:
-                st.session_state.chat_log.append(("assistant", "예산을 숫자로 포함해 주세요."))
-            elif not has_duration:
-                st.session_state.chat_log.append(("assistant", "여행 일정도 함께 알려 주세요."))
-            else:
-                st.session_state.user_condition = user_input
-                st.session_state.step_index = 3
+                    if not has_budget:
+                        st.session_state.chat_log.append(("assistant", "예산을 숫자로 포함해 주세요."))
+                    elif not has_duration:
+                        st.session_state.chat_log.append(("assistant", "여행 일정도 함께 알려 주세요."))
+                    else:
+                        st.session_state.user_condition = user_input
+                        st.session_state.step_index = 3
 
-            st.rerun()
+                    st.rerun()
 
         # --------------------------------------------------
         # STEP 3: 상품 제안 + 수정 대응 (유연)
