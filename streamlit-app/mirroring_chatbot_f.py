@@ -9,52 +9,46 @@ import gspread
 import random
 from google.oauth2.service_account import Credentials
 
-# 1️⃣ 페이지 설정
+# ✅ 1️⃣ 페이지 설정 먼저
 st.set_page_config(page_title="Mirroring Chatbot", layout="centered")
 
-# 2️⃣ Google Sheets 연결 캐싱
-@st.cache_resource
-def connect_sheets():
-    scope = [
-        "https://spreadsheets.google.com/feeds",
-        "https://www.googleapis.com/auth/drive"
-    ]
-    creds = Credentials.from_service_account_info(
-        st.secrets["GCP_SERVICE_ACCOUNT"],
-        scopes=scope
-    )
+# ✅ 3️⃣ Google Sheets 인증
+try:
+    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+    gcp_info = st.secrets["GCP_SERVICE_ACCOUNT"]
+    creds = Credentials.from_service_account_info(gcp_info, scopes=scope)
     gc = gspread.authorize(creds)
-    spreadsheet = gc.open_by_key("1TSfKYISlyU7tweTqIIuwXbgY43xt1POckUa4DSbeHJo")
 
-    survey_ws = spreadsheet.worksheet("survey")
-    conversation_ws = spreadsheet.worksheet("conversation")
+    # ✅ OpenAI API 설정
+    client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-    return survey_ws, conversation_ws
+except Exception as e:
+    st.error(f"❌ 인증 오류: {e}")
 
-survey_ws, conversation_ws = connect_sheets()
+# ✅ 4️⃣ 이후 구글시트 연결
+try:
+    spreadsheet = gc.open_by_key("1J9_hUfp4KIvZMfu7grEKmhbnScNPc91PKgWD4cZPIwE")
+except Exception as e:
+    st.error(f"❌ 시트 연결 실패: {e}")
 
-# 3️⃣ OpenAI
-client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
-
-# 4️⃣ 헤더 자동 삽입 (1회만 실행)
+# 시트 헤더 자동 삽입 함수
 def insert_headers_if_empty(worksheet, headers):
-    if "header_checked" not in st.session_state:
-        try:
-            first_cell = worksheet.get("A1")  # 단일 셀만 읽기
-
-            if not first_cell:
-                worksheet.append_row(headers)
-
-            st.session_state.header_checked = True
-
-        except Exception as e:
-            if "429" in str(e):
-                import time
-                time.sleep(2)
-            else:
-                st.error(f"헤더 오류: {e}")
+    try:
+        if not worksheet.get_all_values():  # 시트가 비어 있으면
+            worksheet.append_row(headers)
+    except Exception as e:
+        st.error(f"헤더 추가 중 오류 발생: {e}")
 
 # 시트 연결
+if "spreadsheet" not in st.session_state:
+    st.session_state.spreadsheet = gc.open_by_key("1TSfKYISlyU7tweTqIIuwXbgY43xt1POckUa4DSbeHJo")
+    st.session_state.survey_ws = st.session_state.spreadsheet.worksheet("survey")
+    st.session_state.conversation_ws = st.session_state.spreadsheet.worksheet("conversation")
+
+spreadsheet = st.session_state.spreadsheet
+survey_ws = st.session_state.survey_ws
+conversation_ws = st.session_state.conversation_ws
+
 insert_headers_if_empty(survey_ws, [
     "timestamp",
     "user_id",
@@ -781,14 +775,16 @@ elif st.session_state.phase == "conversation":
         # ---------------- STEP 6 결정 ----------------
         elif st.session_state.step_index == 6:
 
-            user_input = st.chat_input(script[6])
-            if not user_input:
-                st.stop()
+            if "final_input_received" not in st.session_state:
 
-            st.session_state.chat_log.append(("user", user_input))
+                user_input = st.chat_input(script[6])
+                if not user_input:
+                    st.stop()
 
-            st.session_state.step_index = 7
-            st.rerun()
+                st.session_state.chat_log.append(("user", user_input))
+                st.session_state.final_input_received = True
+                st.session_state.step_index = 7
+                st.rerun()
 
 
         # ---------------- STEP 7 종료 (5초 유지) ----------------
