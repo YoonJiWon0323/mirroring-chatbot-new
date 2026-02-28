@@ -746,27 +746,13 @@ elif st.session_state.phase == "conversation":
                 st.session_state.chat_log.append(("assistant", exception_msg))
                 st.rerun()
 
-            # 🔹 2️⃣ 요청 + 예외 대상
-            if analysis["request"] and st.session_state.get("is_exception", False):
+            # 🔹 2️⃣ 요청이면 무조건 진행
+            if analysis["request"]:
                 st.session_state.step_index = 6
                 st.rerun()
 
-            # 🔹 3️⃣ 요청했지만 예외 아님
-            if analysis["request"] and not st.session_state.get("is_exception", False):
-
-                if st.session_state.tone == "격식체":
-                    msg = "해당 사유는 예외 대상이 아니므로 심사 요청이 불가합니다."
-                elif st.session_state.tone == "해요체":
-                    msg = "해당 사유는 예외 대상이 아니라서 심사 요청이 어려워요."
-                else:
-                    msg = "그 사유로는 심사 요청 안 돼."
-
-                st.session_state.chat_log.append(("assistant", msg))
-                st.session_state.step_index = 2
-                st.rerun()
-
-            # 🔹 4️⃣ 거절 (질문 없는 순수 거절만 종료 유도)
-            if analysis["decline"] and not analysis["question"]:
+            # 🔹 3️⃣ 거절
+            if analysis["decline"]:
 
                 if st.session_state.tone == "격식체":
                     msg = "심사 요청 없이 종료하시겠습니까?"
@@ -778,7 +764,7 @@ elif st.session_state.phase == "conversation":
                 st.session_state.chat_log.append(("assistant", msg))
                 st.rerun()
 
-            # 🔹 5️⃣ 애매한 입력
+            # 🔹 4️⃣ 애매한 입력
             if st.session_state.tone == "격식체":
                 msg = "심사 요청 여부를 명확히 입력하십시오."
             elif st.session_state.tone == "해요체":
