@@ -603,18 +603,18 @@ elif st.session_state.phase == "conversation":
             if user_input:
                 st.session_state.chat_log.append(("user", user_input))
 
-                has_budget = any(k in user_input for k in ["원", "만원"])
-                has_duration = any(k in user_input for k in ["박", "일"])
+             has_budget = any(k in user_input for k in ["원", "만원"])
+             has_duration = any(k in user_input for k in ["박", "일"])
 
-                if not has_budget:
-                    st.session_state.chat_log.append(("assistant", "예산을 숫자로 포함해 주세요."))
-                elif not has_duration:
-                    st.session_state.chat_log.append(("assistant", "여행 일정도 함께 알려 주세요."))
-                else:
-                    st.session_state.user_condition = user_input
-                    st.session_state.step_index = 3
+             if not has_budget:
+                  st.session_state.chat_log.append(("assistant", "예산을 숫자로 포함해 주세요."))
+             elif not has_duration:
+                  st.session_state.chat_log.append(("assistant", "여행 일정도 함께 알려 주세요."))
+              else:
+                 st.session_state.user_condition = user_input
+                  st.session_state.step_index = 3
 
-                st.rerun()
+             st.rerun()
 
         # --------------------------------------------------
         # STEP 3: 상품 제안 + 수정 대응 (유연)
@@ -678,22 +678,22 @@ elif st.session_state.phase == "conversation":
             st.session_state.step_index = 4
             st.rerun()
 
-    # --------------------------------------------------
-    # STEP 4: 수정 요청 단계
-    # --------------------------------------------------
-    elif st.session_state.step_index == 4:
+        # --------------------------------------------------
+        # STEP 4: 수정 요청 단계
+        # --------------------------------------------------
+        elif st.session_state.step_index == 4:
 
-        st.session_state.chat_log.append(("assistant", script[4]))
+            st.session_state.chat_log.append(("assistant", script[4]))
 
-        user_input = st.chat_input("수정 요청을 입력하세요.")
-        if not user_input:
-            st.stop()
+            user_input = st.chat_input("수정 요청을 입력하세요.")
+            if not user_input:
+                st.stop()
 
-        st.session_state.chat_log.append(("user", user_input))
-        st.session_state.user_condition = user_input
+            st.session_state.chat_log.append(("user", user_input))
+            st.session_state.user_condition = user_input
 
-        st.session_state.step_index = 3  # 다시 제안 단계로
-        st.rerun()
+            st.session_state.step_index = 3  # 다시 제안 단계로
+            st.rerun()
 
     # --------------------------------------------------
     # STEP 5: 추가 탐색 여부
