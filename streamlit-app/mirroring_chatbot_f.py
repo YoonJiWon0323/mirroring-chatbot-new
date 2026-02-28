@@ -551,147 +551,183 @@ elif st.session_state.phase == "conversation":
                 st.rerun()
 
     # ==================================================
-    # 🔵 RECOMMEND 시나리오 (GPT 제안 포함)
-    # ==================================================
-    else:
+# RECOMMEND SCENARIO
+# ==================================================
 
-        # STEP 0-1: 접속 + 시작 안내
-        if st.session_state.step_index == 0:
-            st.session_state.chat_log.append(("assistant", script[0]))
-            st.session_state.chat_log.append(("assistant", script[1]))
-            st.session_state.step_index = 1
-            st.rerun()
+elif scenario_type == "recommend":
 
-        user_input = st.chat_input("메시지를 입력하십시오.")
-        if not user_input:
-            st.stop()
+    # ----------------------------------------------
+    # STEP 0-1: 접속 + 시작 안내 (한 번에 출력)
+    # ----------------------------------------------
+    if st.session_state.step_index == 0:
 
-        st.session_state.chat_log.append(("user", user_input))
-
-        # ==================================================
-        # STEP 1: 조건 제시 요청
-        # ==================================================
-        if st.session_state.step_index == 1:
-
-            st.session_state.chat_log.append(("assistant", script[2]))
-            st.session_state.step_index = 2
-            st.rerun()
-
-        # ==================================================
-        # STEP 2: 🔥 GPT가 실제 여행 상품 제안
-        # ==================================================
-        elif st.session_state.step_index == 2:
-
-            system_prompt = f"""
-    당신은 여행 추천 상담 AI입니다.
-    사용자의 조건을 바탕으로 구체적인 여행 상품 1~2개를 제안하십시오.
-    상품에는 다음 요소를 포함하십시오:
-
-    - 여행 지역
-    - 일정
-    - 주요 포함 사항
-    - 간단한 설명
-
-    말투는 반드시 {st.session_state.tone} 스타일을 따르십시오.
-    절차 안내 문장은 쓰지 마십시오.
-    """
-
-            response = client.chat.completions.create(
-                model="gpt-4o",
-                temperature=0.7,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_input}
-                ]
+        if st.session_state.tone == "formal":
+            message = (
+                "추천 상담 시스템에 연결되었습니다.\n"
+                "원하시는 여행 아이디어를 탐색하겠습니다."
+            )
+        else:
+            message = (
+                "추천 상담 시스템 연결됐어.\n"
+                "원하는 여행 아이디어 같이 탐색해볼게."
             )
 
-            reply = response.choices[0].message.content.strip()
-            st.session_state.chat_log.append(("assistant", reply))
+        st.session_state.chat_log.append(("assistant", message))
+        st.session_state.step_index = 1
+        st.rerun()
 
-            st.session_state.step_index = 3
-            st.rerun()
+    # ----------------------------------------------
+    # STEP 2: 조건 입력 요청
+    # ----------------------------------------------
+    elif st.session_state.step_index == 1:
 
-        # ==================================================
-        # STEP 3: 옵션 검토 (의미 기반 처리)
-        # ==================================================
-        elif st.session_state.step_index == 3:
+        if st.session_state.tone == "formal":
+            message = "여행 일정과 예산, 선호 지역을 구체적으로 제시하시기 바랍니다."
+        else:
+            message = "여행 일정이랑 예산, 가고 싶은 지역 말해줘."
 
-            # 1️⃣ 선택 의도 감지 → 다음 단계
-            if any(k in user_input for k in ["선택", "이걸로", "결정", "할게", "예약"]):
+        st.session_state.chat_log.append(("assistant", message))
+        st.session_state.step_index = 2
+        st.rerun()
 
-                st.session_state.chat_log.append(("assistant", script[4]))
-                st.session_state.step_index = 4
-                st.rerun()
+    # ----------------------------------------------
+    # STEP 3: 옵션 제안 (비교형 구조 강제)
+    # ----------------------------------------------
+    elif st.session_state.step_index == 2:
 
-            else:
-                # 2️⃣ 그 외 모든 경우는 GPT가 자연스럽게 대응
-                system_prompt = f"""
+        user_condition = user_input
+
+        system_prompt = f"""
 당신은 여행 추천 상담 AI입니다.
-현재는 '옵션 검토 단계'입니다.
-
-사용자가 새로운 대안을 요청하거나 조건을 수정할 수 있습니다.
-사용자의 요청을 반영하여 새로운 여행 상품 1~2개를 제안하십시오.
+사용자의 조건을 바탕으로 성격이 다른 여행 상품 2개를 제안하십시오.
 
 ⚠️ 반드시 아래 형식을 정확히 지키십시오.
 
 여행 상품 1:
 여행 지역:
 일정:
-예산: (1인 기준 예상 금액 명시)
-주요 포함 사항:
-간단한 설명:
+예산: (1인 기준 예상 금액)
+여행 분위기:
+장점:
+아쉬운 점:
+추천 대상:
 
 여행 상품 2:
 여행 지역:
 일정:
-예산: (1인 기준 예상 금액 명시)
-주요 포함 사항:
-간단한 설명:
+예산: (1인 기준 예상 금액)
+여행 분위기:
+장점:
+아쉬운 점:
+추천 대상:
 
 규칙:
 - 일정은 사용자가 제시한 일정과 동일하게 유지하십시오.
 - 예산은 반드시 숫자로 명시하십시오.
-- 말투는 반드시 {st.session_state.tone} 스타일을 따르십시오.
+- 두 상품은 서로 다른 성격이어야 합니다 (예: 휴양 vs 도시탐방).
+- 말투는 {st.session_state.tone} 스타일을 따르십시오.
+- 절차 안내 문장은 작성하지 마십시오.
+"""
+
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            temperature=0.4,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_condition}
+            ]
+        )
+
+        reply = response.choices[0].message.content.strip()
+        st.session_state.chat_log.append(("assistant", reply))
+
+        # 수정 요청 단계로 이동
+        if st.session_state.tone == "formal":
+            follow_up = "다른 옵션이나 수정 사항이 있으시면 말씀하시기 바랍니다."
+        else:
+            follow_up = "다른 옵션이나 바꾸고 싶은 거 있어?"
+
+        st.session_state.chat_log.append(("assistant", follow_up))
+
+        st.session_state.step_index = 3
+        st.rerun()
+
+    # ----------------------------------------------
+    # STEP 4: 수정 요청 반영 → 재추천
+    # ----------------------------------------------
+    elif st.session_state.step_index == 3:
+
+        revision_request = user_input
+
+        system_prompt = f"""
+사용자의 수정 요청을 반영하여 여행 상품 2개를 다시 제안하십시오.
+
+⚠️ 반드시 동일한 형식을 유지하십시오.
+
+여행 상품 1:
+여행 지역:
+일정:
+예산:
+여행 분위기:
+장점:
+아쉬운 점:
+추천 대상:
+
+여행 상품 2:
+여행 지역:
+일정:
+예산:
+여행 분위기:
+장점:
+아쉬운 점:
+추천 대상:
+
+규칙:
+- 일정은 기존 조건과 동일하게 유지하십시오.
+- 예산은 반드시 숫자로 포함하십시오.
+- 말투는 {st.session_state.tone} 스타일을 따르십시오.
 - 절차 안내 문장은 쓰지 마십시오.
 """
-                response = client.chat.completions.create(
-                    model="gpt-4o",
-                    temperature=0.7,
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_input}
-                    ]
-                )
 
-                reply = response.choices[0].message.content.strip()
-                st.session_state.chat_log.append(("assistant", reply))
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            temperature=0.4,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": revision_request}
+            ]
+        )
 
-                # 🔥 단계 유지
-                st.rerun()
-        
-        # ==================================================
-        # STEP 4: 결정 요청
-        # ==================================================
-        elif st.session_state.step_index == 4:
+        reply = response.choices[0].message.content.strip()
+        st.session_state.chat_log.append(("assistant", reply))
 
-            st.session_state.chat_log.append(("assistant", script[4]))
-            st.session_state.step_index = 5
-            st.rerun()
+        # 추가 탐색 or 종료 유도
+        if st.session_state.tone == "formal":
+            end_prompt = "추가로 탐색할 내용이 있으십니까?"
+        else:
+            end_prompt = "더 탐색해볼까?"
 
-       # ==================================================
-        # STEP 5: 종료 → 5초 후 consent
-        # ==================================================
-        elif st.session_state.step_index == 5:
+        st.session_state.chat_log.append(("assistant", end_prompt))
 
-            final_msg = script[5]
-            st.session_state.chat_log.append(("assistant", final_msg))
-            st.chat_message("assistant").write(final_msg)
+        st.session_state.step_index = 4
+        st.rerun()
 
-            with st.spinner("처리 중..."):
-                time.sleep(5)
+    # ----------------------------------------------
+    # STEP 5: 종료 (5초 표시 후 마무리)
+    # ----------------------------------------------
+    elif st.session_state.step_index == 4:
 
-            st.session_state.phase = "consent"
-            st.rerun()
+        if st.session_state.tone == "formal":
+            end_message = "여행 아이디어 탐색을 종료합니다."
+        else:
+            end_message = "여행 아이디어 탐색 종료할게."
+
+        st.session_state.chat_log.append(("assistant", end_message))
+        st.write(end_message)
+
+        time.sleep(5)
+        st.session_state.step_index = 5
+        st.rerun()
         
 # --------------------------------------------------
 # 파트 4: 설문 + Google Sheets 저장
