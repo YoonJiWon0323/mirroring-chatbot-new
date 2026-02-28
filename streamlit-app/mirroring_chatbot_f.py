@@ -574,15 +574,8 @@ elif st.session_state.phase == "conversation":
                 # 🔥 GPT 기반 예외 판정
                 is_exception = is_reason_sufficient(reason)
 
-                is_exception = (
-                    any(k in reason for k in health_keywords) or
-                    any(k in reason for k in disaster_keywords) or
-                    any(k in reason for k in airline_keywords)
-                )
-
                 # 🔥 예외 여부 저장 (핵심)
                 st.session_state.is_exception = is_exception
-
 
                 # SCRIPT 기반 템플릿 선택
                 if st.session_state.tone == "격식체":
