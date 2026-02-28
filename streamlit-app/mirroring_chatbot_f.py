@@ -209,27 +209,30 @@ SCRIPT = {
 ],
 "recommend_격식체": [
 "추천 상담 시스템에 연결되었습니다.",
-"AI 추천 시스템이 사용자의 조건을 기반으로 상품을 제안합니다.",
-"여행 일정과 예산, 선호 지역을 구체적으로 제시하시기 바랍니다.",
-"제안된 상품의 세부 내용을 확인하시기 바랍니다.",
-"상품을 비교·검토한 후 선택 여부를 결정하시기 바랍니다.",
-"선택 결과에 따라 후속 절차가 안내됩니다."
+"원하시는 여행 아이디어를 탐색하겠습니다.",
+"선호하시는 여행 스타일을 입력하십시오.",
+"입력하신 조건에 맞는 상품을 제안합니다.",
+"다른 옵션이나 수정 사항을 말씀하십시오.",
+"추가로 탐색할 내용을 결정하십시오.",
+"여행 아이디어 탐색을 종료합니다."
 ],
 "recommend_해요체": [
 "추천 상담 시스템에 연결됐어요.",
-"AI 추천 시스템이 사용자의 조건을 바탕으로 상품을 추천해 드려요.",
-"여행 일정이나 예산, 원하는 지역을 자세히 알려 주세요.",
-"제안된 상품 내용 확인해 주세요.",
-"상품 비교해 본 뒤 선택할지 정해 주세요.",
-"선택 결과에 따라 다음 절차를 안내해 드릴게요."
+"원하는 여행 아이디어를 탐색해 볼게요.",
+"선호하는 여행 스타일을 입력해 주세요.",
+"입력한 조건에 맞는 상품을 제안해요.",
+"다른 옵션이나 수정 사항이 있으면 말씀해 주세요.",
+"추가로 탐색할 내용을 결정해 주세요.",
+"여행 아이디어 탐색을 종료할게요."
 ],
 "recommend_반말체": [
 "추천 상담 시스템 연결됐어.",
-"AI 추천 시스템이 사용자 조건을 바탕으로 상품 추천할게.",
-"여행 일정이랑 예산, 원하는 지역 자세히 알려 줘.",
-"제안된 상품 내용 확인해.",
-"상품 비교해 본 뒤 선택할지 정해.",
-"선택 결과에 따라 다음 절차 안내할게."
+"원하는 여행 아이디어 탐색해볼게.",
+"선호하는 여행 스타일 입력해줘.",
+"입력한 조건에 맞는 상품 제안할게.",
+"다른 옵션이나 수정할 거 말해줘.",
+"추가로 탐색할 내용 결정해봐.",
+"여행 아이디어 탐색 종료할게."
 ]
 }
 
@@ -551,123 +554,87 @@ elif st.session_state.phase == "conversation":
                 st.rerun()
 
     # ==================================================
-# RECOMMEND SCENARIO
+# RECOMMEND SCENARIO (유연 통제형 구조)
 # ==================================================
+elif st.session_state.scenario == "recommend":
 
-elif scenario_type == "recommend":
+    key = f"recommend_{st.session_state.tone}"
+    script = SCRIPT[key]
 
-    # ----------------------------------------------
-    # STEP 0-1: 접속 + 시작 안내 (한 번에 출력)
-    # ----------------------------------------------
+    # --------------------------------------------------
+    # STEP 0: 접속
+    # --------------------------------------------------
     if st.session_state.step_index == 0:
-
-        if st.session_state.tone == "formal":
-            message = (
-                "추천 상담 시스템에 연결되었습니다.\n"
-                "원하시는 여행 아이디어를 탐색하겠습니다."
-            )
-        else:
-            message = (
-                "추천 상담 시스템 연결됐어.\n"
-                "원하는 여행 아이디어 같이 탐색해볼게."
-            )
-
-        st.session_state.chat_log.append(("assistant", message))
+        st.session_state.chat_log.append(("assistant", script[0]))
         st.session_state.step_index = 1
         st.rerun()
 
-    # ----------------------------------------------
-    # STEP 2: 조건 입력 요청
-    # ----------------------------------------------
+    # --------------------------------------------------
+    # STEP 1: 시작
+    # --------------------------------------------------
     elif st.session_state.step_index == 1:
-
-        if st.session_state.tone == "formal":
-            message = "여행 일정과 예산, 선호 지역을 구체적으로 제시하시기 바랍니다."
-        else:
-            message = "여행 일정이랑 예산, 가고 싶은 지역 말해줘."
-
-        st.session_state.chat_log.append(("assistant", message))
+        st.session_state.chat_log.append(("assistant", script[1]))
         st.session_state.step_index = 2
         st.rerun()
 
-    # ----------------------------------------------
-    # STEP 3: 옵션 제안 (비교형 구조 강제)
-    # ----------------------------------------------
+    # --------------------------------------------------
+    # STEP 2: 조건 수집 단계 (유연 응답)
+    # --------------------------------------------------
     elif st.session_state.step_index == 2:
 
-        user_condition = user_input
+        if "condition_prompted" not in st.session_state:
+            st.session_state.chat_log.append(("assistant", script[2]))
+            st.session_state.condition_prompted = True
+            st.rerun()
 
-        system_prompt = f"""
-당신은 여행 추천 상담 AI입니다.
-사용자의 조건을 바탕으로 성격이 다른 여행 상품 2개를 제안하십시오.
+        user_input = st.chat_input("조건을 입력하세요.")
+        if not user_input:
+            st.stop()
 
-⚠️ 반드시 아래 형식을 정확히 지키십시오.
+        st.session_state.chat_log.append(("user", user_input))
 
-여행 상품 1:
-여행 지역:
-일정:
-예산: (1인 기준 예상 금액)
-여행 분위기:
-장점:
-아쉬운 점:
-추천 대상:
+        # 조건 충분성 판단
+        has_budget = any(k in user_input for k in ["원", "만원"])
+        has_duration = any(k in user_input for k in ["박", "일"])
 
-여행 상품 2:
-여행 지역:
-일정:
-예산: (1인 기준 예상 금액)
-여행 분위기:
-장점:
-아쉬운 점:
-추천 대상:
+        if not has_budget:
+            st.session_state.chat_log.append(("assistant", "예산을 숫자로 포함해 주세요."))
+            st.stop()
 
-규칙:
-- 일정은 사용자가 제시한 일정과 동일하게 유지하십시오.
-- 예산은 반드시 숫자로 명시하십시오.
-- 두 상품은 서로 다른 성격이어야 합니다 (예: 휴양 vs 도시탐방).
-- 말투는 {st.session_state.tone} 스타일을 따르십시오.
-- 절차 안내 문장은 작성하지 마십시오.
-"""
+        if not has_duration:
+            st.session_state.chat_log.append(("assistant", "여행 일정도 함께 알려 주세요."))
+            st.stop()
 
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            temperature=0.4,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_condition}
-            ]
-        )
-
-        reply = response.choices[0].message.content.strip()
-        st.session_state.chat_log.append(("assistant", reply))
-
-        # 수정 요청 단계로 이동
-        if st.session_state.tone == "formal":
-            follow_up = "다른 옵션이나 수정 사항이 있으시면 말씀하시기 바랍니다."
-        else:
-            follow_up = "다른 옵션이나 바꾸고 싶은 거 있어?"
-
-        st.session_state.chat_log.append(("assistant", follow_up))
-
+        st.session_state.user_condition = user_input
         st.session_state.step_index = 3
         st.rerun()
 
-    # ----------------------------------------------
-    # STEP 4: 수정 요청 반영 → 재추천
-    # ----------------------------------------------
+    # --------------------------------------------------
+    # STEP 3: 상품 제안 + 수정 대응 (유연)
+    # --------------------------------------------------
     elif st.session_state.step_index == 3:
 
-        revision_request = user_input
+        user_input = st.chat_input("메시지를 입력하세요.")
+        if not user_input and "user_condition" not in st.session_state:
+            st.stop()
+
+        if user_input:
+            st.session_state.chat_log.append(("user", user_input))
+            st.session_state.user_condition = user_input
 
         system_prompt = f"""
-사용자의 수정 요청을 반영하여 여행 상품 2개를 다시 제안하십시오.
+당신은 여행 추천 상담 AI입니다.
 
-⚠️ 반드시 동일한 형식을 유지하십시오.
+현재 단계: 상품 제안 및 수정 반영 단계
+
+규칙:
+- 항상 여행 상품 2개를 제시하십시오.
+- 반드시 아래 형식을 유지하십시오.
 
 여행 상품 1:
 여행 지역:
 일정:
-예산:
+예산: (숫자 포함)
 여행 분위기:
 장점:
 아쉬운 점:
@@ -676,57 +643,79 @@ elif scenario_type == "recommend":
 여행 상품 2:
 여행 지역:
 일정:
-예산:
+예산: (숫자 포함)
 여행 분위기:
 장점:
 아쉬운 점:
 추천 대상:
 
-규칙:
-- 일정은 기존 조건과 동일하게 유지하십시오.
-- 예산은 반드시 숫자로 포함하십시오.
+- 사용자의 수정 요청(국가 변경, 예산 조정 등)을 반드시 반영하십시오.
+- 일정은 최초 조건과 동일하게 유지하십시오.
+- 예산은 숫자로 명시하십시오.
 - 말투는 {st.session_state.tone} 스타일을 따르십시오.
-- 절차 안내 문장은 쓰지 마십시오.
+- 절차 멘트는 작성하지 마십시오.
 """
 
         response = client.chat.completions.create(
             model="gpt-4o",
-            temperature=0.4,
+            temperature=0.5,
             messages=[
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": revision_request}
+                {"role": "user", "content": st.session_state.user_condition}
             ]
         )
 
         reply = response.choices[0].message.content.strip()
         st.session_state.chat_log.append(("assistant", reply))
-
-        # 추가 탐색 or 종료 유도
-        if st.session_state.tone == "formal":
-            end_prompt = "추가로 탐색할 내용이 있으십니까?"
-        else:
-            end_prompt = "더 탐색해볼까?"
-
-        st.session_state.chat_log.append(("assistant", end_prompt))
 
         st.session_state.step_index = 4
         st.rerun()
 
-    # ----------------------------------------------
-    # STEP 5: 종료 (5초 표시 후 마무리)
-    # ----------------------------------------------
+    # --------------------------------------------------
+    # STEP 4: 수정 요청 단계
+    # --------------------------------------------------
     elif st.session_state.step_index == 4:
 
-        if st.session_state.tone == "formal":
-            end_message = "여행 아이디어 탐색을 종료합니다."
+        st.session_state.chat_log.append(("assistant", script[4]))
+
+        user_input = st.chat_input("수정 요청을 입력하세요.")
+        if not user_input:
+            st.stop()
+
+        st.session_state.chat_log.append(("user", user_input))
+        st.session_state.user_condition = user_input
+
+        st.session_state.step_index = 3  # 다시 제안 단계로
+        st.rerun()
+
+    # --------------------------------------------------
+    # STEP 5: 추가 탐색 여부
+    # --------------------------------------------------
+    elif st.session_state.step_index == 5:
+
+        st.session_state.chat_log.append(("assistant", script[5]))
+
+        user_input = st.chat_input("추가 탐색 여부를 입력하세요.")
+        if not user_input:
+            st.stop()
+
+        st.session_state.chat_log.append(("user", user_input))
+
+        if any(k in user_input for k in ["아니", "그만", "종료", "괜찮"]):
+            st.session_state.step_index = 6
         else:
-            end_message = "여행 아이디어 탐색 종료할게."
+            st.session_state.user_condition = user_input
+            st.session_state.step_index = 3
 
-        st.session_state.chat_log.append(("assistant", end_message))
-        st.write(end_message)
+        st.rerun()
 
-        time.sleep(5)
-        st.session_state.step_index = 5
+    # --------------------------------------------------
+    # STEP 6: 종료
+    # --------------------------------------------------
+    elif st.session_state.step_index == 6:
+
+        st.session_state.chat_log.append(("assistant", script[6]))
+        st.session_state.phase = "consent"
         st.rerun()
         
 # --------------------------------------------------
