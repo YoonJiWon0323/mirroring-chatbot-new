@@ -611,7 +611,7 @@ elif st.session_state.phase == "conversation":
                 messages=[
                     {
                         "role": "system",
-                        "content": "사용자의 입력에 여행 일정, 예산, 지역이 모두 포함되어 있으면 '충분', 아니면 '부족'만 답하십시오."
+                        "content": "사용자의 입력에 여행 일정과 예산이 포함되어 있고, 지역이 특정되지 않았더라도 여행 범위(국내/해외 등)가 언급되면 '충분'으로 판단하십시오."
                     },
                     {
                         "role": "user",
