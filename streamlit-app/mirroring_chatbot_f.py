@@ -612,21 +612,24 @@ elif st.session_state.phase == "conversation":
             st.rerun()
 
         # ==================================================
-        # STEP 3: 옵션 검토 (질문 대응 가능)
+        # STEP 3: 옵션 검토 (질문 + 조건 변경 감지)
         # ==================================================
         elif st.session_state.step_index == 3:
 
-            # 질문 감지
-            if "?" in user_input or "얼마" in user_input or "예산" in user_input:
+            # 🔥 조건 재입력 감지
+            condition_keywords = ["박", "일", "만원", "예산", "해외", "국내"]
+
+            # 🔹 사용자가 새로운 조건을 다시 제시한 경우
+            if any(k in user_input for k in condition_keywords):
 
                 system_prompt = f"""
-        당신은 여행 상담 AI입니다.
-        사용자가 제안된 상품에 대해 추가 정보를 요청했습니다.
-        구체적으로 답하십시오.
-        가격, 조건 등 필요한 정보를 제공하십시오.
-        말투는 반드시 {st.session_state.tone} 스타일을 따르십시오.
-        절차 안내 문장은 쓰지 마십시오.
-        """
+                당신은 여행 추천 상담 AI입니다.
+                사용자가 기존 제안을 마음에 들어하지 않아 새로운 조건을 다시 제시했습니다.
+                해당 조건에 맞는 새로운 여행 상품 1~2개를 다시 제안하십시오.
+
+                말투는 반드시 {st.session_state.tone} 스타일을 따르십시오.
+                절차 안내 문장은 쓰지 마십시오.
+                """
 
                 response = client.chat.completions.create(
                     model="gpt-4o",
@@ -640,15 +643,44 @@ elif st.session_state.phase == "conversation":
                 reply = response.choices[0].message.content.strip()
                 st.session_state.chat_log.append(("assistant", reply))
 
-                # 🔥 단계 유지 (step_index 증가 안 함)
+                # 🔥 단계 유지 (검토 단계 유지)
                 st.rerun()
 
-            else:
-                # 질문이 아니면 다음 단계로
-                st.session_state.chat_log.append(("assistant", script[3]))
+            # 🔹 정보 질문인 경우
+            elif "?" in user_input or "얼마" in user_input or "예산" in user_input:
+
+                system_prompt = f"""
+                사용자가 제안된 상품의 세부 정보에 대해 질문했습니다.
+                구체적으로 답하십시오.
+                말투는 반드시 {st.session_state.tone} 스타일을 따르십시오.
+                절차 안내 문장은 쓰지 마십시오.
+                """
+
+                response = client.chat.completions.create(
+                    model="gpt-4o",
+                    temperature=0.7,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_input}
+                    ]
+                )
+
+                reply = response.choices[0].message.content.strip()
+                st.session_state.chat_log.append(("assistant", reply))
+                st.rerun()
+
+            # 🔹 선택 표현이면 다음 단계
+            elif any(k in user_input for k in ["선택", "이걸로", "결정", "할게"]):
+
+                st.session_state.chat_log.append(("assistant", script[4]))
                 st.session_state.step_index = 4
                 st.rerun()
 
+            else:
+                # 아무것도 해당 안 되면 그냥 다시 안내
+                st.session_state.chat_log.append(("assistant", script[3]))
+                st.rerun()
+        
         # ==================================================
         # STEP 4: 결정 요청
         # ==================================================
