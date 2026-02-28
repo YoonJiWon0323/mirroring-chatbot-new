@@ -670,32 +670,21 @@ elif st.session_state.phase == "conversation":
 
             st.session_state.chat_log.append(("user", user_input))
 
-            # 🔥 GPT 의도 판단
-            classification = client.chat.completions.create(
-                model="gpt-4o",
-                temperature=0,
-                messages=[
-                    {"role": "system",
-                     "content": "사용자가 수정 요청을 하는지 아니면 수정이 없다고 하는지 판단하여 '수정' 또는 '없음' 중 하나만 답하십시오."},
-                    {"role": "user",
-                    "content": user_input}
-                ]
-            )
+            normalized = user_input.strip()
 
-            intent = classification.choices[0].message.content.strip()
-
-            if intent == "수정":
+            if normalized in ["없음", "없어요", "없습니다", "아니요", "괜찮아요"]:
+                # 수정 없음 → 바로 챗봇이 추가 탐색 질문
+                st.session_state.chat_log.append(("assistant", script[5]))
+                st.session_state.step_index = 5
+            else:
+                # 수정 있음 → 다시 추천
                 st.session_state.user_condition = user_input
                 st.session_state.step_index = 3
-            else:
-                st.session_state.step_index = 5
 
             st.rerun()
 
         # ---------------- STEP 5 추가 탐색 여부 ----------------
         elif st.session_state.step_index == 5:
-
-            st.session_state.chat_log.append(("assistant", script[5]))
 
             user_input = st.chat_input("계속 탐색하시겠습니까?")
             if not user_input:
@@ -703,23 +692,12 @@ elif st.session_state.phase == "conversation":
 
             st.session_state.chat_log.append(("user", user_input))
 
-            classification = client.chat.completions.create(
-                model="gpt-4o",
-                temperature=0,
-                messages=[
-                    {"role": "system",
-                     "content": "사용자가 탐색을 종료하는지 계속하는지 판단하여 '종료' 또는 '계속' 중 하나만 답하십시오."},
-                    {"role": "user",
-                    "content": user_input}
-                ]
-            )
+            normalized = user_input.strip()
 
-            intent = classification.choices[0].message.content.strip()
-
-            if intent == "계속":
-                st.session_state.step_index = 3
-            else:
+            if normalized in ["아니요", "아니", "그만", "종료", "괜찮아요"]:
                 st.session_state.step_index = 6
+            else:
+                st.session_state.step_index = 3
 
             st.rerun()
 
