@@ -435,7 +435,6 @@ elif st.session_state.phase == "conversation":
             st.session_state.chat_log.append(("assistant", script[1]))
             st.session_state.chat_log.append(("assistant", script[2]))  # 취소 사유 입력 안내
             st.session_state.step_index = 1
-            st.rerun()
 
     # ==================================================
     # STEP 1: 환불 요청 및 사유 설명
