@@ -625,6 +625,7 @@ elif st.session_state.phase == "conversation":
             if result == "충분":
                 st.session_state.user_condition = user_input
                 st.session_state.step_index = 3
+                st.session_state.step2_shown = False
             else:
                 st.session_state.chat_log.append(("assistant", "여행 일정, 예산, 원하는 지역을 모두 포함해 주세요."))
 
@@ -638,13 +639,18 @@ elif st.session_state.phase == "conversation":
                 temperature=0.9,
                 messages=[
                     {"role": "system",
-                     "content": f"""
-                     사용자의 조건을 반드시 반영하여 여행 상품 2개를 제시하십시오.
-                     조건:
-                    - 일정과 예산을 반드시 반영하십시오.
-                    - 이전에 제시한 지역은 다시 사용하지 마십시오.
-                    - 최대한 다양한 국가 또는 도시를 제시하십시오.
-                    - 인사말은 작성하지 마십시오.
+                    "content": f"""
+                    사용자의 조건을 반드시 반영하여 여행 상품 2개를 제시하십시오.
+
+                    사용자 조건:
+                    {st.session_state.user_condition}
+
+                    규칙:
+                    1. 사용자가 제시한 예산을 절대 초과하지 마십시오.
+                    2. 일정은 반드시 동일하게 유지하십시오.
+                    3. 예산은 숫자로 명확히 표기하십시오.
+                    4. 이전에 제시한 지역은 사용하지 마십시오.
+                    5. 인사말은 작성하지 마십시오.
                     """
                     },
                     {"role": "user",
@@ -699,7 +705,8 @@ elif st.session_state.phase == "conversation":
             intent = classification.choices[0].message.content.strip()
 
             if intent == "수정":
-                st.session_state.user_condition = user_input
+            # 🔥 기존 조건 유지 + 추가 요청 누적
+                st.session_state.user_condition += "\n추가 요청: " + user_input
                 st.session_state.step_index = 3
 
             elif intent == "없음":
@@ -768,14 +775,23 @@ elif st.session_state.phase == "conversation":
             st.session_state.chat_log.append(("user", user_input))
 
             st.session_state.step_index = 7
-            st.session_state.chat_log.append(("assistant", script[7]))
             st.rerun()
 
 
-        # ---------------- STEP 7 종료 ----------------
+        # ---------------- STEP 7 종료 (5초 유지) ----------------
         elif st.session_state.step_index == 7:
 
-            st.session_state.chat_log.append(("assistant", script[7]))
+            if "end_time" not in st.session_state:
+                st.session_state.chat_log.append(("assistant", script[7]))
+                st.session_state.end_time = time.time()
+                st.rerun()
+
+            if time.time() - st.session_state.end_time < 5:
+                st.stop()
+
+            # 🔥 여기로 내려와야 실행됨
+            del st.session_state.end_time
+            st.session_state.phase = "consent"
             st.stop()
 
 # --------------------------------------------------
