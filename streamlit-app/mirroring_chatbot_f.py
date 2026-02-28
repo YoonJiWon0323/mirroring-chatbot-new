@@ -873,3 +873,4 @@ elif st.session_state.get("phase") == "consent":
                     ], value_input_option="USER_ENTERED")
 
             st.success("✅ 설문과 대화가 각각 Google Sheets에 저장되었습니다!")
+
