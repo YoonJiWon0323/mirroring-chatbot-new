@@ -556,6 +556,10 @@ elif st.session_state.phase == "conversation":
                     any(k in reason for k in airline_keywords)
                 )
 
+                # 🔥 예외 여부 저장 (핵심)
+                st.session_state.is_exception = is_exception
+
+
                 # SCRIPT 기반 템플릿 선택
                 if st.session_state.tone == "격식체":
                     if is_exception:
@@ -621,8 +625,30 @@ elif st.session_state.phase == "conversation":
                 st.stop()
 
             st.session_state.chat_log.append(("user", user_input))
-            st.session_state.step_index = 6
-            st.rerun()
+
+            # 🔥 예외 아닌 경우 차단
+            if not st.session_state.get("is_exception", False):
+                if st.session_state.tone == "격식체":
+                    deny_msg = "해당 사유는 예외 적용 대상이 아니므로 심사 요청이 불가합니다."
+                elif st.session_state.tone == "해요체":
+                    deny_msg = "해당 사유는 예외 대상이 아니라서 심사 요청이 어려워요."
+                else:
+                    deny_msg = "그 사유로는 심사 요청 안 돼."
+
+                st.session_state.chat_log.append(("assistant", deny_msg))
+
+                # 🔥 다시 사유 입력 단계로 복귀
+                st.session_state.step_index = 2
+                st.session_state.step2_prompted = False
+                st.session_state.step4_done = False
+                st.session_state.step5_prompted = False
+
+                st.rerun()
+
+            else:
+                # 예외 인정된 경우에만 STEP6 진행
+                st.session_state.step_index = 6
+                st.rerun()
 
         # ---------------- STEP 6 종료 ----------------
         elif st.session_state.step_index == 6:
