@@ -9,84 +9,33 @@ import gspread
 import random
 from google.oauth2.service_account import Credentials
 
-# ✅ 1️⃣ 페이지 설정 먼저
+🔥 완전 안정 버전
+# 1️⃣ 페이지 설정
 st.set_page_config(page_title="Mirroring Chatbot", layout="centered")
 
-# ✅ 3️⃣ Google Sheets 인증
-try:
-    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-    gcp_info = st.secrets["GCP_SERVICE_ACCOUNT"]
-    creds = Credentials.from_service_account_info(gcp_info, scopes=scope)
+# 2️⃣ Google Sheets + OpenAI 연결 캐싱
+@st.cache_resource
+def connect_services():
+    scope = [
+        "https://spreadsheets.google.com/feeds",
+        "https://www.googleapis.com/auth/drive"
+    ]
+    creds = Credentials.from_service_account_info(
+        st.secrets["GCP_SERVICE_ACCOUNT"],
+        scopes=scope
+    )
     gc = gspread.authorize(creds)
 
-    # ✅ OpenAI API 설정
+    spreadsheet = gc.open_by_key("1TSfKYISlyU7tweTqIIuwXbgY43xt1POckUa4DSbeHJo")
+    survey_ws = spreadsheet.worksheet("survey")
+    conversation_ws = spreadsheet.worksheet("conversation")
+
     client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-except Exception as e:
-    st.error(f"❌ 인증 오류: {e}")
+    return survey_ws, conversation_ws, client
 
-# ✅ 4️⃣ 이후 구글시트 연결
-try:
-    spreadsheet = gc.open_by_key("1J9_hUfp4KIvZMfu7grEKmhbnScNPc91PKgWD4cZPIwE")
-except Exception as e:
-    st.error(f"❌ 시트 연결 실패: {e}")
 
-# 시트 헤더 자동 삽입 함수
-def insert_headers_if_empty(worksheet, headers):
-    try:
-        if not worksheet.get_all_values():  # 시트가 비어 있으면
-            worksheet.append_row(headers)
-    except Exception as e:
-        st.error(f"헤더 추가 중 오류 발생: {e}")
-
-# 시트 연결
-if "spreadsheet" not in st.session_state:
-    st.session_state.spreadsheet = gc.open_by_key("1TSfKYISlyU7tweTqIIuwXbgY43xt1POckUa4DSbeHJo")
-    st.session_state.survey_ws = st.session_state.spreadsheet.worksheet("survey")
-    st.session_state.conversation_ws = st.session_state.spreadsheet.worksheet("conversation")
-
-spreadsheet = st.session_state.spreadsheet
-survey_ws = st.session_state.survey_ws
-conversation_ws = st.session_state.conversation_ws
-
-insert_headers_if_empty(survey_ws, [
-    "timestamp",
-    "user_id",
-
-    # 실험 조건
-    "scenario",
-    "tone",
-
-    # 인구통계
-    "gender",
-    "age",
-    "education",
-    "job",
-
-    # 조작점검
-    "power1","power2","power3",
-    "tone1","tone2","tone3",
-
-    # 종속
-    "sat1","sat2","sat3",
-
-    # 매개
-    "app1","app2","app3",
-
-    # 통제
-    "rude1","rude2",
-    "comp1","comp2","comp3",
-
-    # AI 노출
-    "exp1","exp2","exp3","exp4"
-])
-
-insert_headers_if_empty(conversation_ws, [
-    "timestamp",
-    "user_id",
-    "role",
-    "message"
-])
+survey_ws, conversation_ws, client = connect_services()
 
 # --------------------------------------------------
 # 세션 초기화
