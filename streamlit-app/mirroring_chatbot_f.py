@@ -414,6 +414,31 @@ def generate_regulation_response(user_input, instruction):
 
     return response.choices[0].message.content.strip()
 
+def end_and_go_to_survey():
+    
+    if st.session_state.tone == "격식체":
+        msg1 = "상담을 종료합니다."
+        msg2 = "설문 페이지로 넘어갑니다."
+    elif st.session_state.tone == "해요체":
+        msg1 = "상담을 종료할게요."
+        msg2 = "설문 페이지로 넘어갈게요."
+    else:
+        msg1 = "상담 끝낼게."
+        msg2 = "설문 페이지로 넘어갈게."
+
+    st.session_state.chat_log.append(("assistant", msg1))
+    st.chat_message("assistant").write(msg1)
+
+    time.sleep(2)
+
+    st.session_state.chat_log.append(("assistant", msg2))
+    st.chat_message("assistant").write(msg2)
+
+    time.sleep(2)
+
+    st.session_state.phase = "consent"
+    st.rerun()
+
 def detect_refund_confirmation(user_input):
 
     prompt = f"""
@@ -623,19 +648,7 @@ elif st.session_state.phase == "conversation":
     
     # 즉시 종료 처리
     if user_input.strip() == "즉시 종료":
-
-        if st.session_state.tone == "격식체":
-            msg = "대화를 종료합니다. 설문으로 이동하겠습니다."
-        elif st.session_state.tone == "해요체":
-            msg = "대화를 종료할게요. 설문으로 이동할게요."
-        else:
-            msg = "대화 끝낼게. 설문으로 넘어갈게."
-
-        st.session_state.chat_log.append(("assistant", msg))
-        st.chat_message("assistant").write(msg)
-
-        st.session_state.phase = "consent"
-        st.rerun()
+        end_and_go_to_survey()
 
     # ---------------- 환불 종료 의도 GPT 판단 ----------------
     if st.session_state.scenario == "refund":
@@ -705,9 +718,7 @@ elif st.session_state.phase == "conversation":
                     st.session_state.chat_log.append(("assistant", msg))
                     st.chat_message("assistant").write(msg)
 
-                    st.session_state.phase = "consent"
-                    st.rerun()
-                    st.stop()
+                    end_and_go_to_survey()
 
             else:
 
@@ -795,9 +806,7 @@ elif st.session_state.phase == "conversation":
                         st.session_state.chat_log.append(("assistant", msg))
                         st.chat_message("assistant").write(msg)
 
-                        st.session_state.phase = "consent"
-                        st.rerun()
-                        st.stop()
+                        end_and_go_to_survey()
 
                 else:
 
