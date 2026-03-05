@@ -631,58 +631,58 @@ elif st.session_state.phase == "conversation":
             st.session_state.chat_log.append(("assistant", first_msg))
             st.chat_message("assistant").write(first_msg)
 
-    # 기존 대화 출력
-    for role, message in st.session_state.chat_log:
-        st.chat_message(role).write(message)
+            # 기존 대화 출력
+            for role, message in st.session_state.chat_log:
+                st.chat_message(role).write(message)
 
-    user_input = st.chat_input("메시지를 입력하세요.")
-    if not user_input:
-        st.stop()
+            user_input = st.chat_input("메시지를 입력하세요.")
+            if not user_input:
+                st.stop()
 
-    # 사용자 메시지 기록
-    st.session_state.chat_log.append(("user", user_input))
-    st.chat_message("user").write(user_input)
+            # 사용자 메시지 기록
+            st.session_state.chat_log.append(("user", user_input))
+            st.chat_message("user").write(user_input)
 
-    # 🔴 종료 감지
-    if is_exit(user_input):
+            # 🔴 종료 감지
+            if is_exit(user_input):
 
-        if st.session_state.tone == "격식체":
-            msg = "대화를 종료합니다."
-        elif st.session_state.tone == "해요체":
-            msg = "대화를 종료할게요."
-        else:
-            msg = "대화 종료할게."
+                if st.session_state.tone == "격식체":
+                    msg = "대화를 종료합니다."
+                elif st.session_state.tone == "해요체":
+                    msg = "대화를 종료할게요."
+                else:
+                    msg = "대화 종료할게."
 
-        st.session_state.chat_log.append(("assistant", msg))
-        st.chat_message("assistant").write(msg)
+                st.session_state.chat_log.append(("assistant", msg))
+                st.chat_message("assistant").write(msg)
 
-        st.session_state.phase = "consent"
-        st.rerun()
+                st.session_state.phase = "consent"
+                st.rerun()
 
-    # 🔵 시나리오에 따른 프롬프트 선택
-    if st.session_state.scenario == "refund":
-        system_prompt = PROMPT_BLOCK_REFUND[st.session_state.tone]
-    else:
-        system_prompt = PROMPT_BLOCK_RECOMMEND[st.session_state.tone]
+            # 🔵 시나리오에 따른 프롬프트 선택
+            if st.session_state.scenario == "refund":
+                system_prompt = PROMPT_BLOCK_REFUND[st.session_state.tone]
+            else:
+                system_prompt = PROMPT_BLOCK_RECOMMEND[st.session_state.tone]
 
-    # 🔵 대화 히스토리 포함
-    messages = [{"role": "system", "content": system_prompt}]
+            # 🔵 대화 히스토리 포함
+            messages = [{"role": "system", "content": system_prompt}]
 
-    for role, message in st.session_state.chat_log:
-        messages.append({"role": role, "content": message})
+            for role, message in st.session_state.chat_log:
+                messages.append({"role": role, "content": message})
 
-    # 🔵 GPT 호출
-    response = client.chat.completions.create(
-        model="gpt-4o",
-        temperature=0.7,
-        messages=messages
-    )
+            # 🔵 GPT 호출
+            response = client.chat.completions.create(
+                model="gpt-4o",
+                temperature=0.7,
+                messages=messages
+            )
 
-    reply = response.choices[0].message.content.strip()
+            reply = response.choices[0].message.content.strip()
 
-    # 챗봇 응답 기록
-    st.session_state.chat_log.append(("assistant", reply))
-    st.chat_message("assistant").write(reply)
+            # 챗봇 응답 기록
+            st.session_state.chat_log.append(("assistant", reply))
+            st.chat_message("assistant").write(reply)
 
 # --------------------------------------------------
 # 파트 4: 설문 + Google Sheets 저장
