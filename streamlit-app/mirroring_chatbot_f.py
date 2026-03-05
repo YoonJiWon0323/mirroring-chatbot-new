@@ -795,64 +795,50 @@ elif st.session_state.phase == "conversation":
 
                 st.session_state.phase = "consent"
                 st.rerun()
+                st.stop()
 
         # ---------------- 추천 상담 종료 의도 판단 ----------------
-        if st.session_state.scenario == "recommend":
+    if st.session_state.scenario == "recommend":
 
-            if not st.session_state.recommend_confirm:
+        if not st.session_state.recommend_confirm:
 
-                finish_intent = detect_recommend_finish_intent(user_input)
+            finish_intent = detect_recommend_finish_intent(user_input)
 
-                if finish_intent:
+            if finish_intent:
 
-                    st.session_state.recommend_confirm = True
+                st.session_state.recommend_confirm = True
 
-                    if st.session_state.tone == "격식체":
-                        msg = "추천 상담을 마치시겠다면 어느 여행지로 결정하시겠습니까?"
-                    elif st.session_state.tone == "해요체":
-                        msg = "추천 상담을 마치신다면 어느 여행지로 결정하실 건가요?"
-                    else:
-                        msg = "추천 상담 끝낼 거면 어디로 갈지 결정했어?"
+                if st.session_state.tone == "격식체":
+                    msg = "추천 상담을 마치시겠다면 어느 여행지로 결정하시겠습니까?"
+                elif st.session_state.tone == "해요체":
+                    msg = "추천 상담을 마치신다면 어느 여행지로 결정하실 건가요?"
+                else:
+                    msg = "추천 상담 끝낼 거면 어디로 갈지 결정했어?"
 
-                    st.session_state.chat_log.append(("assistant", msg))
-                    st.chat_message("assistant").write(msg)
+                st.session_state.chat_log.append(("assistant", msg))
+                st.chat_message("assistant").write(msg)
 
-                    st.stop()
+                st.stop()
 
-            else:
-
-                destination = extract_destination(user_input)
-
-                if destination != "NONE":
-
-                    if st.session_state.tone == "격식체":
-                        msg = f"{destination} 여행으로 결정하신 것으로 이해하겠습니다. 즐거운 여행 준비가 되시길 바랍니다."
-                    elif st.session_state.tone == "해요체":
-                        msg = f"{destination} 여행으로 결정하신 걸로 이해할게요. 즐거운 여행 준비가 되길 바라요."
-                    else:
-                        msg = f"{destination} 여행으로 결정한 거네. 즐거운 여행 준비해."
-
-                    st.session_state.chat_log.append(("assistant", msg))
-                    st.chat_message("assistant").write(msg)
-
-                    st.session_state.phase = "consent"
-                    st.rerun()
-
-    # 🔴 종료 감지
-    if is_exit(user_input):
-
-        if st.session_state.tone == "격식체":
-            msg = "대화를 종료합니다."
-        elif st.session_state.tone == "해요체":
-            msg = "대화를 종료할게요."
         else:
-            msg = "대화 종료할게."
 
-        st.session_state.chat_log.append(("assistant", msg))
-        st.chat_message("assistant").write(msg)
+            destination = extract_destination(user_input)
 
-        st.session_state.phase = "consent"
-        st.rerun()
+            if destination != "NONE":
+
+                if st.session_state.tone == "격식체":
+                    msg = f"{destination} 여행으로 결정하신 것으로 이해하겠습니다. 즐거운 여행 준비가 되시길 바랍니다."
+                elif st.session_state.tone == "해요체":
+                    msg = f"{destination} 여행으로 결정하신 걸로 이해할게요. 즐거운 여행 준비가 되길 바라요."
+                else:
+                    msg = f"{destination} 여행으로 결정한 거네. 즐거운 여행 준비해."
+
+                st.session_state.chat_log.append(("assistant", msg))
+                st.chat_message("assistant").write(msg)
+
+                st.session_state.phase = "consent"
+                st.rerun()
+                st.stop()
 
     # 🔵 프롬프트 선택
     if st.session_state.scenario == "refund":
