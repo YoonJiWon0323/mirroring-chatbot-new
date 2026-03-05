@@ -378,141 +378,6 @@ def detect_refund_finish_intent(user_input):
 
     return response.choices[0].message.content.strip() == "YES"
 
-# ---------------- 사유 충분성 의미 판정 ----------------
-def is_reason_sufficient(user_input):
-
-    judge_prompt = f"""
-다음 취소 사유가 아래 예외 기준에 해당하는지 판단하십시오.
-
-예외 기준은 다음 세 가지뿐입니다:
-
-1. 본인 또는 직계 가족의 중대한 건강상 사유
-2. 천재지변 등 불가항력적 상황
-3. 항공사 측의 운항 변경 또는 취소
-
-위 세 가지에 명확히 해당하면 YES,
-해당하지 않거나 단순 개인 사정이면 NO만 답하십시오.
-
-반드시 YES 또는 NO 중 하나만 출력하십시오.
-
-사유:
-{user_input}
-"""
-
-    response = client.chat.completions.create(
-        model="gpt-4o",
-        temperature=0,
-        messages=[
-            {"role": "system", "content": "판정만 수행하십시오. 다른 설명은 하지 마십시오."},
-            {"role": "user", "content": judge_prompt}
-        ]
-    )
-
-    answer = response.choices[0].message.content.strip().upper()
-
-    return answer == "YES"
-
-def classify_review_intent(user_input):
-
-    judge_prompt = f"""
-다음 사용자의 발화를 심사 요청 의도에 따라 분류하십시오.
-
-분류 기준은 다음 세 가지입니다:
-
-1. 요청: 심사를 진행해 달라고 명확히 요청함
-2. 거절: 심사를 진행하지 않겠다고 명확히 밝힘
-3. 불명확: 위 두 가지 중 어디에도 명확히 해당하지 않음
-
-반드시 아래 중 하나만 출력하십시오:
-
-요청
-거절
-불명확
-
-사용자 발화:
-{user_input}
-"""
-
-    response = client.chat.completions.create(
-        model="gpt-4o",
-        temperature=0,
-        messages=[
-            {"role": "system", "content": "의도 분류만 수행하십시오. 다른 설명은 하지 마십시오."},
-            {"role": "user", "content": judge_prompt}
-        ]
-    )
-
-    return response.choices[0].message.content.strip()
-
-def analyze_user_intent(user_input):
-
-    judge_prompt = f"""
-다음 사용자 발화를 분석하십시오.
-
-아래 항목을 각각 YES 또는 NO로 판단하십시오.
-
-1. 질문이 포함되어 있는가?
-2. 심사 요청 의사가 있는가?
-3. 심사를 진행하지 않겠다는 의사가 있는가?
-
-반드시 아래 형식으로만 답하십시오:
-
-질문: YES/NO
-요청: YES/NO
-거절: YES/NO
-
-사용자 발화:
-{user_input}
-"""
-
-    response = client.chat.completions.create(
-        model="gpt-4o",
-        temperature=0,
-        messages=[
-            {"role": "system", "content": "형식에 맞춰 판단만 하십시오."},
-            {"role": "user", "content": judge_prompt}
-        ]
-    )
-
-    text = response.choices[0].message.content
-
-    return {
-        "question": "YES" in text.splitlines()[0],
-        "request": "YES" in text.splitlines()[1],
-        "decline": "YES" in text.splitlines()[2],
-    }
-
-# ---------------- 단일 라벨 의도 분류 ----------------
-def classify_intent_single(user_input):
-
-    judge_prompt = f"""
-다음 사용자 발화를 하나의 의도로만 분류하십시오.
-
-반드시 아래 네 가지 중 하나만 출력하십시오:
-
-요청  → 심사를 진행해 달라는 명확한 의사 표현
-거절  → 심사를 진행하지 않겠다는 명확한 의사 표현
-질문  → 규정, 예외 기준 등에 대한 질문
-기타  → 위 세 가지에 해당하지 않는 모호한 발화
-
-다른 설명 없이 단어 하나만 출력하십시오.
-
-사용자 발화:
-{user_input}
-"""
-
-    response = client.chat.completions.create(
-        model="gpt-4o",
-        temperature=0,
-        messages=[
-            {"role": "system", "content": "의도 분류만 수행하십시오."},
-            {"role": "user", "content": judge_prompt}
-        ]
-    )
-
-    return response.choices[0].message.content.strip()
-
-
 def generate_regulation_response(user_input, instruction):
 
     # 🔵 시나리오에 따라 프롬프트 선택
@@ -572,17 +437,19 @@ YES 또는 NO만 출력하십시오.
 
     return response.choices[0].message.content.strip() == "YES"
 
-def detect_refund_confirmation(user_input):
+def detect_recommend_confirmation(user_input):
 
     prompt = f"""
-다음 사용자 발화가 환불 심사 진행에 대한 확인 응답인지 판단하십시오.
+다음 사용자 발화가 여행지 결정을 의미하는지 판단하십시오.
 
-확인 응답 예:
-네
-예
-맞습니다
-진행해주세요
-그렇게 하겠습니다
+예:
+일본 갈게요
+대만으로 할게요
+파리로 결정할게요
+그걸로 할게요
+
+여행지 선택이 명확하면 YES
+아니면 NO
 
 YES 또는 NO만 출력하십시오.
 
@@ -653,45 +520,6 @@ YES 또는 NO만 출력하십시오.
     )
 
     return response.choices[0].message.content.strip() == "YES"
-
-def check_step_completion(user_input, step_index, scenario):
-
-    if scenario == "recommend":
-
-        # 1단계: 조건 제시
-        if step_index == 0:
-            keywords = ["예산", "일", "박", "원", "만원"]
-            return any(k in user_input for k in keywords)
-
-        # 2단계: 옵션 검토
-        elif step_index == 1:
-            return len(user_input.strip()) > 5
-
-        # 3단계: 최종 선택
-        elif step_index == 2:
-            return any(k in user_input for k in ["선택", "결정", "할게", "이걸로"])
-
-    elif scenario == "refund":
-        # STEP 1: 사유 입력
-        if step_index == 2:  # 실제 사유 입력 단계
-            return len(user_input.strip()) > 5
-
-        # STEP 2: 심사 요청
-        elif step_index == 4:
-            return any(k in user_input for k in ["요청", "진행", "심사"])
-
-    return False
-
-# ---------------- 종료 감지 ----------------
-def is_exit(text):
-    exit_words = ["종료", "그만", "끝", "중단", "대화 종료", "그만할게"]
-    return any(word in text for word in exit_words)
-    
-
-# ---------------- 질문 감지 ----------------
-def is_question(text):
-    keywords = ["?", "왜", "어떻게", "무엇", "가능"]
-    return any(k in text for k in keywords)
 
 
 # ---------------- System Prompt Builder ----------------
