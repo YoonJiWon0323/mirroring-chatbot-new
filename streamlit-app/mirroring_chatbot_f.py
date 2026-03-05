@@ -455,10 +455,13 @@ def classify_intent_single(user_input):
     return response.choices[0].message.content.strip()
 
 
-# ---------------- 규정 기반 답변 생성 ----------------
 def generate_regulation_response(user_input, instruction):
 
-    system_prompt = PROMPT_BLOCK[st.session_state.tone]
+    # 🔵 시나리오에 따라 프롬프트 선택
+    if st.session_state.scenario == "refund":
+        system_prompt = PROMPT_BLOCK_REFUND[st.session_state.tone]
+    else:
+        system_prompt = PROMPT_BLOCK_RECOMMEND[st.session_state.tone]
 
     response = client.chat.completions.create(
         model="gpt-4o",
@@ -475,14 +478,15 @@ def generate_regulation_response(user_input, instruction):
 
 사용자 발화:
 {user_input}
-
-규정에 근거하여 절차 중심으로 답변하십시오.
 """
             }
         ]
     )
 
     return response.choices[0].message.content.strip()
+
+    return response.choices[0].message.content.strip()
+
 
 def check_step_completion(user_input, step_index, scenario):
 
