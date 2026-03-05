@@ -543,6 +543,63 @@ def generate_regulation_response(user_input, instruction):
 
     return response.choices[0].message.content.strip()
 
+def detect_refund_confirmation(user_input):
+
+    prompt = f"""
+다음 사용자 발화가 환불 심사 진행에 대한 확인 응답인지 판단하십시오.
+
+확인 응답 예:
+네
+예
+맞습니다
+진행해주세요
+그렇게 하겠습니다
+
+YES 또는 NO만 출력하십시오.
+
+사용자 발화:
+{user_input}
+"""
+
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        temperature=0,
+        messages=[
+            {"role": "system", "content": "판정만 수행하십시오."},
+            {"role": "user", "content": prompt}
+        ]
+    )
+
+    return response.choices[0].message.content.strip() == "YES"
+
+def detect_refund_confirmation(user_input):
+
+    prompt = f"""
+다음 사용자 발화가 환불 심사 진행에 대한 확인 응답인지 판단하십시오.
+
+확인 응답 예:
+네
+예
+맞습니다
+진행해주세요
+그렇게 하겠습니다
+
+YES 또는 NO만 출력하십시오.
+
+사용자 발화:
+{user_input}
+"""
+
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        temperature=0,
+        messages=[
+            {"role": "system", "content": "판정만 수행하십시오."},
+            {"role": "user", "content": prompt}
+        ]
+    )
+
+    return response.choices[0].message.content.strip() == "YES"
 
 def extract_destination(user_input):
 
@@ -779,7 +836,7 @@ elif st.session_state.phase == "conversation":
         # 2️⃣ 확인 이후 응답
         else:
 
-            confirm = detect_refund_finish_intent(user_input)
+            confirm = detect_refund_confirmation(user_input)
 
             if confirm:
 
@@ -822,23 +879,28 @@ elif st.session_state.phase == "conversation":
 
         else:
 
-            destination = extract_destination(user_input)
+            confirm = detect_recommend_confirmation(user_input)
 
-            if destination != "NONE":
+            if confirm:
 
-                if st.session_state.tone == "격식체":
-                    msg = f"{destination} 여행으로 결정하신 것으로 이해하겠습니다. 즐거운 여행 준비가 되시길 바랍니다."
-                elif st.session_state.tone == "해요체":
-                    msg = f"{destination} 여행으로 결정하신 걸로 이해할게요. 즐거운 여행 준비가 되길 바라요."
-                else:
-                    msg = f"{destination} 여행으로 결정한 거네. 즐거운 여행 준비해."
+                destination = extract_destination(user_input)
 
-                st.session_state.chat_log.append(("assistant", msg))
-                st.chat_message("assistant").write(msg)
+                if destination != "NONE":
 
-                st.session_state.phase = "consent"
-                st.rerun()
-                st.stop()
+                    if st.session_state.tone == "격식체":
+                        msg = f"{destination} 여행으로 결정하신 것으로 이해하겠습니다. 즐거운 여행 준비가 되시길 바랍니다."
+                    elif st.session_state.tone == "해요체":
+                        msg = f"{destination} 여행으로 결정하신 걸로 이해할게요. 즐거운 여행 준비가 되길 바라요."
+                    else:
+                        msg = f"{destination} 여행으로 결정한 거네. 즐거운 여행 준비해."
+
+                    st.session_state.chat_log.append(("assistant", msg))
+                    st.chat_message("assistant").write(msg)
+
+                    st.session_state.phase = "consent"
+                    st.rerun()
+                    st.stop()
+
 
     # 🔵 프롬프트 선택
     if st.session_state.scenario == "refund":
