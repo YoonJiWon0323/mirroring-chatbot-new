@@ -606,86 +606,83 @@ elif st.session_state.phase == "scenario":
         st.rerun()
 
 
-# ==================================================
-# 4️⃣ 단계 고정 대화
-# ==================================================
 elif st.session_state.phase == "conversation":
 
-# 🔵 대화 시작 시 챗봇 첫 메시지
-        if len(st.session_state.chat_log) == 0:
+    # 🔵 첫 메시지 (한 번만 생성)
+    if len(st.session_state.chat_log) == 0:
 
-            if st.session_state.scenario == "refund":
+        if st.session_state.scenario == "refund":
 
-                if st.session_state.tone == "격식체":
-                    first_msg = "안녕하십니까. 여행 상품 환불 심사 상담을 시작합니다. 취소 사유를 설명해 주십시오."
-                elif st.session_state.tone == "해요체":
-                    first_msg = "안녕하세요. 여행 상품 환불 심사를 도와드릴게요. 취소 사유를 말씀해 주세요."
-                else:
-                    first_msg = "안녕. 여행 상품 환불 심사 시작할게. 취소한 이유를 말해줘."
-
-            else:  # recommend
-
-                if st.session_state.tone == "격식체":
-                    first_msg = "안녕하십니까. 여행 상품 추천 상담을 시작합니다. 여행 일정, 예산, 선호 지역을 말씀해 주십시오."
-                elif st.session_state.tone == "해요체":
-                    first_msg = "안녕하세요. 여행 상품 추천을 도와드릴게요. 일정, 예산, 원하는 지역을 알려 주세요."
-                else:
-                    first_msg = "안녕. 여행 추천 도와줄게. 일정이랑 예산, 원하는 지역 말해줘."
-
-            st.session_state.chat_log.append(("assistant", first_msg))
-
-            # 기존 대화 출력
-            for role, message in st.session_state.chat_log:
-                st.chat_message(role).write(message)
-
-            user_input = st.chat_input("메시지를 입력하세요.")
-            if not user_input:
-                st.stop()
-
-            # 사용자 메시지 기록
-            st.session_state.chat_log.append(("user", user_input))
-            st.chat_message("user").write(user_input)
-
-            # 🔴 종료 감지
-            if is_exit(user_input):
-
-                if st.session_state.tone == "격식체":
-                    msg = "대화를 종료합니다."
-                elif st.session_state.tone == "해요체":
-                    msg = "대화를 종료할게요."
-                else:
-                    msg = "대화 종료할게."
-
-                st.session_state.chat_log.append(("assistant", msg))
-                st.chat_message("assistant").write(msg)
-
-                st.session_state.phase = "consent"
-                st.rerun()
-
-            # 🔵 시나리오에 따른 프롬프트 선택
-            if st.session_state.scenario == "refund":
-                system_prompt = PROMPT_BLOCK_REFUND[st.session_state.tone]
+            if st.session_state.tone == "격식체":
+                first_msg = "안녕하십니까. 여행 상품 환불 심사 상담을 시작합니다. 취소 사유를 설명해 주십시오."
+            elif st.session_state.tone == "해요체":
+                first_msg = "안녕하세요. 여행 상품 환불 심사를 도와드릴게요. 취소 사유를 말씀해 주세요."
             else:
-                system_prompt = PROMPT_BLOCK_RECOMMEND[st.session_state.tone]
+                first_msg = "안녕. 여행 상품 환불 심사 시작할게. 취소한 이유를 말해줘."
 
-            # 🔵 대화 히스토리 포함
-            messages = [{"role": "system", "content": system_prompt}]
+        else:
 
-            for role, message in st.session_state.chat_log:
-                messages.append({"role": role, "content": message})
+            if st.session_state.tone == "격식체":
+                first_msg = "안녕하십니까. 여행 상품 추천 상담을 시작합니다. 여행 일정, 예산, 선호 지역을 말씀해 주십시오."
+            elif st.session_state.tone == "해요체":
+                first_msg = "안녕하세요. 여행 상품 추천을 도와드릴게요. 일정, 예산, 원하는 지역을 알려 주세요."
+            else:
+                first_msg = "안녕. 여행 추천 도와줄게. 일정이랑 예산, 원하는 지역 말해줘."
 
-            # 🔵 GPT 호출
-            response = client.chat.completions.create(
-                model="gpt-4o",
-                temperature=0.7,
-                messages=messages
-            )
+        st.session_state.chat_log.append(("assistant", first_msg))
 
-            reply = response.choices[0].message.content.strip()
+    # 🔵 기존 대화 출력
+    for role, message in st.session_state.chat_log:
+        st.chat_message(role).write(message)
 
-            # 챗봇 응답 기록
-            st.session_state.chat_log.append(("assistant", reply))
-            st.chat_message("assistant").write(reply)
+    # 🔵 사용자 입력
+    user_input = st.chat_input("메시지를 입력하세요.")
+    if not user_input:
+        st.stop()
+
+    st.session_state.chat_log.append(("user", user_input))
+    st.chat_message("user").write(user_input)
+
+    # 🔴 종료 감지
+    if is_exit(user_input):
+
+        if st.session_state.tone == "격식체":
+            msg = "대화를 종료합니다."
+        elif st.session_state.tone == "해요체":
+            msg = "대화를 종료할게요."
+        else:
+            msg = "대화 종료할게."
+
+        st.session_state.chat_log.append(("assistant", msg))
+        st.chat_message("assistant").write(msg)
+
+        st.session_state.phase = "consent"
+        st.rerun()
+
+    # 🔵 프롬프트 선택
+    if st.session_state.scenario == "refund":
+        system_prompt = PROMPT_BLOCK_REFUND[st.session_state.tone]
+    else:
+        system_prompt = PROMPT_BLOCK_RECOMMEND[st.session_state.tone]
+
+    # 🔵 대화 히스토리 포함
+    messages = [{"role": "system", "content": system_prompt}]
+
+    for role, message in st.session_state.chat_log:
+        messages.append({"role": role, "content": message})
+
+    # 🔵 GPT 호출
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        temperature=0.7,
+        messages=messages
+    )
+
+    reply = response.choices[0].message.content.strip()
+
+    st.session_state.chat_log.append(("assistant", reply))
+    st.chat_message("assistant").write(reply)
+    
 
 # --------------------------------------------------
 # 파트 4: 설문 + Google Sheets 저장
