@@ -522,38 +522,6 @@ YES 또는 NO만 출력하십시오.
     return response.choices[0].message.content.strip() == "YES"
 
 
-# ---------------- System Prompt Builder ----------------
-def build_system_prompt(current_step):
-
-    # 환불 시나리오 → 문서 기반 프롬프트 사용
-    if st.session_state.scenario == "refund":
-        tone_prompt = PROMPT_BLOCK[st.session_state.tone]
-
-    # 추천 시나리오 → 간단한 절차형 프롬프트
-    else:
-        tone_prompt = f"""
-[System Role]
-귀하는 여행 상품 추천 상담 AI입니다.
-모든 답변은 절차 중심으로 전달하십시오.
-
-[Guidelines]
-- 감정 표현 없이 절차 중심으로 설명하십시오.
-- 현재 단계에 맞는 답변만 하십시오.
-"""
-
-    return f"""
-{tone_prompt}
-
-[현재 단계]
-{current_step}
-
-[응답 규칙]
-- 현재 단계의 핵심 지시 내용을 벗어나지 마십시오.
-- 단계 문장을 그대로 반복하지 마십시오.
-- 사용자의 발화에 맞추어 동일한 톤으로 1~2문장 보충 설명만 제공하십시오.
-- 다음 단계로 넘어가지 마십시오.
-"""
-    
 # ==================================================
 # 1️⃣ 상황 선택 화면
 # ==================================================
@@ -663,8 +631,13 @@ elif st.session_state.phase == "conversation":
 
         # 2️⃣ 확인 이후 응답
         else:
+            # --- 실험 안정용 YES 안전장치 ---
+            simple_yes = ["응", "네", "예", "그래", "ㅇㅋ", "ok", "yes"]
 
-            confirm = detect_refund_confirmation(user_input)
+            if user_input.strip().lower() in simple_yes:
+                confirm = True
+            else:
+                confirm = detect_recommend_confirmation(user_input)
 
             if confirm:
 
@@ -681,8 +654,20 @@ elif st.session_state.phase == "conversation":
                 st.session_state.phase = "consent"
                 st.rerun()
                 st.stop()
+            else:
 
-        # ---------------- 추천 상담 종료 의도 판단 ----------------
+                if st.session_state.tone == "격식체":
+                    msg = "환불 심사 진행 여부를 명확히 말씀해 주십시오."
+                elif st.session_state.tone == "해요체":
+                    msg = "환불 심사를 진행할지 여부를 말씀해 주세요."
+                else:
+                    msg = "심사 진행할지 말해줘."
+
+                st.session_state.chat_log.append(("assistant", msg))
+                st.chat_message("assistant").write(msg)
+                st.stop()
+
+    # ---------------- 추천 상담 종료 의도 판단 ----------------
     if st.session_state.scenario == "recommend":
 
         if not st.session_state.recommend_confirm:
@@ -705,9 +690,16 @@ elif st.session_state.phase == "conversation":
 
                 st.stop()
 
+        # 2️⃣ 확인 이후 응답
         else:
 
-            confirm = detect_recommend_confirmation(user_input)
+            # --- 실험 안정용 YES 안전장치 ---
+            simple_yes = ["응", "네", "예", "그래", "ㅇㅋ", "ok", "yes"]
+
+            if user_input.strip().lower() in simple_yes:
+                confirm = True
+            else:
+                confirm = detect_recommend_confirmation(user_input)
 
             if confirm:
 
@@ -728,6 +720,32 @@ elif st.session_state.phase == "conversation":
                     st.session_state.phase = "consent"
                     st.rerun()
                     st.stop()
+
+                else:
+
+                    if st.session_state.tone == "격식체":
+                        msg = "어느 여행지로 결정하셨는지 말씀해 주십시오."
+                    elif st.session_state.tone == "해요체":
+                        msg = "어느 여행지로 결정했는지 말씀해 주세요."
+                    else:
+                        msg = "어디로 갈지 말해줘."
+
+                    st.session_state.chat_log.append(("assistant", msg))
+                    st.chat_message("assistant").write(msg)
+                    st.stop()
+
+            else:
+
+                if st.session_state.tone == "격식체":
+                    msg = "추천 상담을 종료하고 여행지를 결정하시겠습니까?"
+                elif st.session_state.tone == "해요체":
+                    msg = "추천 상담을 종료하고 여행지를 결정할까요?"
+                else:
+                    msg = "추천 끝내고 여행지 정할까?"
+
+                st.session_state.chat_log.append(("assistant", msg))
+                st.chat_message("assistant").write(msg)
+                st.stop()
 
 
     # 🔵 프롬프트 선택
