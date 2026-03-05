@@ -117,6 +117,12 @@ if "chat_log" not in st.session_state:
 
 if "last_role" not in st.session_state:
     st.session_state.last_role = None
+
+if "recommend_confirm" not in st.session_state:
+    st.session_state.recommend_confirm = False
+
+if "chosen_destination" not in st.session_state:
+    st.session_state.chosen_destination = None
     
 # --------------------------------------------------
 # 시나리오 안내
@@ -201,6 +207,9 @@ PROMPT_BLOCK_REFUND = {
 - 이모티콘, 감탄사, 구어체 표현을 사용하지 마십시오.
 - 감정적 표현을 배제하고 규정과 절차 중심으로 설명하십시오.
 - 판단은 개인적 의견이 아닌 규정 기준에 근거하여 제시하십시오.
+- 사용자의 발화가 환불 심사와 무관한 경우,
+  현재 상담 주제가 여행 환불 심사임을 안내한 후
+  다른 요청 사항이 있는지 또는 대화를 종료할 것인지 질문하십시오.
 
 [규정 문구]
 환불 여부는 내부 규정에 따라 결정됩니다.
@@ -226,6 +235,9 @@ PROMPT_BLOCK_REFUND = {
 - 이모티콘과 감탄사는 사용하지 않아요.
 - 감정 표현은 최소화하고 규정과 절차 중심으로 설명해요.
 - 판단은 규정 기준에 근거해 제시해요.
+- 사용자의 발화가 환불 심사와 무관한 경우,
+  현재 상담 주제가 여행 환불 심사임을 안내한 후
+  다른 요청 사항이 있는지 또는 대화를 종료할 것인지 질문하십시오.
 
 [규정 문구]
 환불 여부는 내부 규정에 따라 결정돼요.
@@ -251,6 +263,9 @@ PROMPT_BLOCK_REFUND = {
 - 이모티콘, 감탄사, 감정 표현은 쓰지 마.
 - 감정적 공감 표현 없이 규정과 절차 중심으로 설명해.
 - 판단은 규정 기준에 근거해서 제시해.
+- 사용자의 발화가 환불 심사와 무관한 경우,
+  현재 상담 주제가 여행 환불 심사임을 안내한 후
+  다른 요청 사항이 있는지 또는 대화를 종료할 것인지 질문하십시오.
 
 [규정 문구]
 환불 여부는 내부 규정에 따라 결정돼.
@@ -279,6 +294,9 @@ PROMPT_BLOCK_RECOMMEND = {
 - 이모티콘, 감탄사, 과도한 구어 표현을 사용하지 마십시오.
 - 사용자가 제시한 조건(예산, 일정, 지역 등)을 중심으로 설명하십시오.
 - 추천 상품은 조건에 맞는 여행 아이디어로 제시하십시오.
+- 사용자의 발화가 여행 상품 추천과 관련이 없는 경우,
+  현재 상담 주제가 여행 상품 추천임을 안내한 후
+  다른 요청 사항이 있는지 또는 대화를 종료할 것인지 질문하십시오.
 
 [응답 방식]
 - 사용자의 여행 조건을 바탕으로 여행 상품 또는 여행 아이디어를 제안하십시오.
@@ -296,6 +314,9 @@ PROMPT_BLOCK_RECOMMEND = {
 - 이모티콘과 감탄사는 사용하지 않아요.
 - 사용자가 제시한 여행 조건을 중심으로 설명해요.
 - 조건에 맞는 여행 상품이나 여행 아이디어를 제안해요.
+- 사용자의 발화가 여행 상품 추천과 관련이 없는 경우,
+  현재 상담 주제가 여행 상품 추천임을 안내한 후
+  다른 요청 사항이 있는지 또는 대화를 종료할 것인지 질문하십시오.
 
 [응답 방식]
 - 사용자의 조건을 기반으로 여행 상품 또는 여행 아이디어를 제안해요.
@@ -313,12 +334,45 @@ PROMPT_BLOCK_RECOMMEND = {
 - 이모티콘이나 감탄사는 쓰지 마.
 - 사용자가 말한 여행 조건을 중심으로 설명해.
 - 조건에 맞는 여행 상품이나 여행 아이디어를 제안해.
+- 사용자의 발화가 여행 상품 추천과 관련이 없는 경우,
+  현재 상담 주제가 여행 상품 추천임을 안내한 후
+  다른 요청 사항이 있는지 또는 대화를 종료할 것인지 질문하십시오.
 
 [응답 방식]
 - 사용자 조건을 기반으로 여행 상품이나 여행 아이디어를 제안해.
 - 조건이 부족하면 일정이나 예산 같은 정보를 추가로 물어봐.
 """
 }
+
+def detect_refund_finish_intent(user_input):
+
+    judge_prompt = f"""
+다음 사용자 발화가 아래 상황에 해당하는지 판단하십시오.
+
+상황:
+- 더 이상 질문이 없음
+- 상담을 마치고 싶음
+- 대화를 종료하려고 함
+
+해당하면 YES
+아니면 NO
+
+반드시 YES 또는 NO만 출력하십시오.
+
+사용자 발화:
+{user_input}
+"""
+
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        temperature=0,
+        messages=[
+            {"role": "system", "content": "판정만 수행하십시오."},
+            {"role": "user", "content": judge_prompt}
+        ]
+    )
+
+    return response.choices[0].message.content.strip() == "YES"
 
 # ---------------- 사유 충분성 의미 판정 ----------------
 def is_reason_sufficient(user_input):
@@ -485,8 +539,59 @@ def generate_regulation_response(user_input, instruction):
 
     return response.choices[0].message.content.strip()
 
+
+def extract_destination(user_input):
+
+    prompt = f"""
+다음 사용자 발화에서 여행지를 추출하십시오.
+
+여행지가 명확하면 여행지 이름만 출력하십시오.
+여행지가 없으면 NONE을 출력하십시오.
+
+사용자 발화:
+{user_input}
+"""
+
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        temperature=0,
+        messages=[
+            {"role": "system", "content": "여행지 추출만 수행하십시오."},
+            {"role": "user", "content": prompt}
+        ]
+    )
+
     return response.choices[0].message.content.strip()
 
+def detect_recommend_finish_intent(user_input):
+
+    prompt = f"""
+다음 사용자 발화가 아래 상황인지 판단하십시오.
+
+상황:
+- 더 이상 질문이 없음
+- 상담을 마치려고 함
+- 추천 상담을 종료하려고 함
+
+해당하면 YES
+아니면 NO
+
+YES 또는 NO만 출력하십시오.
+
+사용자 발화:
+{user_input}
+"""
+
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        temperature=0,
+        messages=[
+            {"role": "system", "content": "판정만 수행하십시오."},
+            {"role": "user", "content": prompt}
+        ]
+    )
+
+    return response.choices[0].message.content.strip() == "YES"
 
 def check_step_completion(user_input, step_index, scenario):
 
@@ -642,6 +747,92 @@ elif st.session_state.phase == "conversation":
 
     st.session_state.chat_log.append(("user", user_input))
     st.chat_message("user").write(user_input)
+
+    # ---------------- 환불 종료 의도 GPT 판단 ----------------
+    if st.session_state.scenario == "refund":
+
+        # 1️⃣ 종료 의도 판단
+        if not st.session_state.refund_confirm:
+
+            finish_intent = detect_refund_finish_intent(user_input)
+
+            if finish_intent:
+
+                st.session_state.refund_confirm = True
+
+                if st.session_state.tone == "격식체":
+                    msg = "추가 문의 사항이 없으시다면 환불 심사 진행 요청으로 이해해도 되겠습니까?"
+                elif st.session_state.tone == "해요체":
+                    msg = "추가 문의가 없으시면 환불 심사를 진행해 달라는 요청으로 이해해도 될까요?"
+                else:
+                    msg = "추가로 할 말 없으면 환불 심사 진행 요청으로 이해해도 될까?"
+
+                st.session_state.chat_log.append(("assistant", msg))
+                st.chat_message("assistant").write(msg)
+
+                st.stop()
+
+        # 2️⃣ 확인 이후 응답
+        else:
+
+            confirm = detect_refund_finish_intent(user_input)
+
+            if confirm:
+
+                if st.session_state.tone == "격식체":
+                    msg = "환불 심사 요청이 접수되었습니다. 심사 결과는 내부 규정에 따라 결정됩니다."
+                elif st.session_state.tone == "해요체":
+                    msg = "환불 심사 요청이 접수됐어요. 심사 결과는 내부 규정에 따라 결정돼요."
+                else:
+                    msg = "환불 심사 요청 접수됐어. 결과는 내부 규정에 따라 결정돼."
+
+                st.session_state.chat_log.append(("assistant", msg))
+                st.chat_message("assistant").write(msg)
+
+                st.session_state.phase = "consent"
+                st.rerun()
+
+        # ---------------- 추천 상담 종료 의도 판단 ----------------
+        if st.session_state.scenario == "recommend":
+
+            if not st.session_state.recommend_confirm:
+
+                finish_intent = detect_recommend_finish_intent(user_input)
+
+                if finish_intent:
+
+                    st.session_state.recommend_confirm = True
+
+                    if st.session_state.tone == "격식체":
+                        msg = "추천 상담을 마치시겠다면 어느 여행지로 결정하시겠습니까?"
+                    elif st.session_state.tone == "해요체":
+                        msg = "추천 상담을 마치신다면 어느 여행지로 결정하실 건가요?"
+                    else:
+                        msg = "추천 상담 끝낼 거면 어디로 갈지 결정했어?"
+
+                    st.session_state.chat_log.append(("assistant", msg))
+                    st.chat_message("assistant").write(msg)
+
+                    st.stop()
+
+            else:
+
+                destination = extract_destination(user_input)
+
+                if destination != "NONE":
+
+                    if st.session_state.tone == "격식체":
+                        msg = f"{destination} 여행으로 결정하신 것으로 이해하겠습니다. 즐거운 여행 준비가 되시길 바랍니다."
+                    elif st.session_state.tone == "해요체":
+                        msg = f"{destination} 여행으로 결정하신 걸로 이해할게요. 즐거운 여행 준비가 되길 바라요."
+                    else:
+                        msg = f"{destination} 여행으로 결정한 거네. 즐거운 여행 준비해."
+
+                    st.session_state.chat_log.append(("assistant", msg))
+                    st.chat_message("assistant").write(msg)
+
+                    st.session_state.phase = "consent"
+                    st.rerun()
 
     # 🔴 종료 감지
     if is_exit(user_input):
