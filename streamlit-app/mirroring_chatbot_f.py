@@ -106,6 +106,15 @@ if "phase" not in st.session_state:
 if "scenario" not in st.session_state:
     st.session_state.scenario = None
 
+if "refund_confirm" not in st.session_state:
+    st.session_state.refund_confirm = False
+
+if "recommend_confirm" not in st.session_state:
+    st.session_state.recommend_confirm = False
+
+if "chosen_destination" not in st.session_state:
+    st.session_state.chosen_destination = None
+
 if "tone" not in st.session_state:
     st.session_state.tone = None
 
@@ -118,11 +127,6 @@ if "chat_log" not in st.session_state:
 if "last_role" not in st.session_state:
     st.session_state.last_role = None
 
-if "recommend_confirm" not in st.session_state:
-    st.session_state.recommend_confirm = False
-
-if "chosen_destination" not in st.session_state:
-    st.session_state.chosen_destination = None
     
 # --------------------------------------------------
 # 시나리오 안내
