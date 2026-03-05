@@ -613,23 +613,22 @@ elif st.session_state.phase == "conversation":
             if st.session_state.scenario == "refund":
 
                 if st.session_state.tone == "격식체":
-                    first_msg = "여행 상품 환불 심사 상담을 시작합니다. 취소 사유를 설명해 주십시오."
+                    first_msg = "안녕하십니까. 여행 상품 환불 심사 상담을 시작합니다. 취소 사유를 설명해 주십시오."
                 elif st.session_state.tone == "해요체":
-                    first_msg = "여행 상품 환불 심사를 도와드릴게요. 취소 사유를 말씀해 주세요."
+                    first_msg = "안녕하세요. 여행 상품 환불 심사를 도와드릴게요. 취소 사유를 말씀해 주세요."
                 else:
-                    first_msg = "여행 상품 환불 심사 시작할게. 취소한 이유를 말해줘."
+                    first_msg = "안녕. 여행 상품 환불 심사 시작할게. 취소한 이유를 말해줘."
 
             else:  # recommend
 
                 if st.session_state.tone == "격식체":
-                    first_msg = "여행 상품 추천 상담을 시작합니다. 여행 일정, 예산, 선호 지역을 말씀해 주십시오."
+                    first_msg = "안녕하십니까. 여행 상품 추천 상담을 시작합니다. 여행 일정, 예산, 선호 지역을 말씀해 주십시오."
                 elif st.session_state.tone == "해요체":
-                    first_msg = "여행 상품 추천을 도와드릴게요. 일정, 예산, 원하는 지역을 알려 주세요."
+                    first_msg = "안녕하세요. 여행 상품 추천을 도와드릴게요. 일정, 예산, 원하는 지역을 알려 주세요."
                 else:
-                    first_msg = "여행 추천 도와줄게. 일정이랑 예산, 원하는 지역 말해줘."
+                    first_msg = "안녕. 여행 추천 도와줄게. 일정이랑 예산, 원하는 지역 말해줘."
 
             st.session_state.chat_log.append(("assistant", first_msg))
-            st.chat_message("assistant").write(first_msg)
 
             # 기존 대화 출력
             for role, message in st.session_state.chat_log:
