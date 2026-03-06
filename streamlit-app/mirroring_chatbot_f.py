@@ -656,89 +656,82 @@ elif st.session_state.phase == "conversation":
         # 1️⃣ 종료 의도 판단
         if not st.session_state.refund_confirm:
 
-            finish_intent = detect_refund_finish_intent(user_input)
+            if st.session_state.turn_count >= 5:
 
-            if finish_intent:
+                finish_intent = detect_refund_finish_intent(user_input)
 
-                st.session_state.refund_confirm = True
+                if finish_intent:
 
-                if st.session_state.tone == "격식체":
-                    msg = "추가 문의 사항이 없으시다면 환불 심사 진행 요청으로 이해해도 되겠습니까?"
-                elif st.session_state.tone == "해요체":
-                    msg = "추가 문의가 없으시면 환불 심사를 진행해 달라는 요청으로 이해해도 될까요?"
-                else:
-                    msg = "추가로 할 말 없으면 환불 심사 진행 요청으로 이해해도 될까?"
-
-                st.session_state.chat_log.append(("assistant", msg))
-                st.chat_message("assistant").write(msg)
-
-                st.stop()
-
-        # 2️⃣ 심사 요청 확인 이후
-        else:
-
-            # --- 실험 안정용 YES 안전장치 ---
-            simple_yes = ["응", "네", "예", "그래", "ㅇㅋ", "ok", "yes"]
-
-            if user_input.strip().lower() in simple_yes:
-                confirm = True
-            else:
-                confirm = detect_refund_confirmation(user_input)
-
-            if confirm:
-
-                # 🔵 5턴 이상이면 종료 안내 포함
-                if st.session_state.turn_count >= 5:
+                    st.session_state.refund_confirm = True
 
                     if st.session_state.tone == "격식체":
-                        msg = """환불 심사 요청이 접수되었습니다. 심사 결과는 내부 규정에 따라 결정됩니다.
-    추가 문의 사항이 없으시다면 대화를 종료하겠습니다. 종료를 원하시면 '즉시 종료'를 입력하십시오."""
+                        msg = "추가 문의 사항이 없으시다면 환불 심사 진행 요청으로 이해해도 되겠습니까?"
                     elif st.session_state.tone == "해요체":
-                        msg = """환불 심사 요청이 접수됐어요. 심사 결과는 내부 규정에 따라 결정돼요.
-    더 궁금한 점이 없으시면 대화를 종료할게요. 종료를 원하시면 '즉시 종료'라고 입력해 주세요."""
+                        msg = "추가 문의가 없으시면 환불 심사를 진행해 달라는 요청으로 이해해도 될까요?"
                     else:
-                        msg = """환불 심사 요청 접수됐어. 결과는 내부 규정에 따라 결정돼.
-    더 물어볼 거 없으면 대화 끝낼게. 끝내려면 '즉시 종료'라고 입력해."""
+                        msg = "추가로 할 말 없으면 환불 심사 진행 요청으로 이해해도 될까?"
 
                     st.session_state.chat_log.append(("assistant", msg))
                     st.chat_message("assistant").write(msg)
 
                     st.stop()
 
-                # 🔵 5턴 미만이면 바로 설문
-                else:
-
-                    if st.session_state.tone == "격식체":
-                        msg = "환불 심사 요청이 접수되었습니다. 심사 결과는 내부 규정에 따라 결정됩니다."
-                    elif st.session_state.tone == "해요체":
-                        msg = "환불 심사 요청이 접수됐어요. 심사 결과는 내부 규정에 따라 결정돼요."
-                    else:
-                        msg = "환불 심사 요청 접수됐어. 결과는 내부 규정에 따라 결정돼."
-
-                    st.session_state.chat_log.append(("assistant", msg))
-                    st.chat_message("assistant").write(msg)
-
-                    end_and_go_to_survey()
-
+            # 2️⃣ 심사 요청 확인 이후
             else:
 
-                if st.session_state.tone == "격식체":
-                    msg = "환불 심사 진행 여부를 명확히 말씀해 주십시오."
-                elif st.session_state.tone == "해요체":
-                    msg = "환불 심사를 진행할지 여부를 말씀해 주세요."
+                # --- 실험 안정용 YES 안전장치 ---
+                simple_yes = ["응", "네", "예", "그래", "ㅇㅋ", "ok", "yes"]
+
+                if user_input.strip().lower() in simple_yes:
+                    confirm = True
                 else:
-                    msg = "심사 진행할지 말해줘."
+                    confirm = detect_refund_confirmation(user_input)
 
-                st.session_state.chat_log.append(("assistant", msg))
-                st.chat_message("assistant").write(msg)
-                st.stop()
+                if confirm:
 
-    # ---------------- 추천 상담 종료 의도 판단 ----------------
+                    # 🔵 5턴 이상일 때만 종료 안내 가능
+                    if st.session_state.turn_count >= 5:
+
+                        if st.session_state.tone == "격식체":
+                            msg = """환불 심사 요청이 접수되었습니다. 심사 결과는 내부 규정에 따라 결정됩니다.
+                추가 문의 사항이 없으시다면 대화를 종료하겠습니다. 종료를 원하시면 '즉시 종료'를 입력하십시오."""
+                        elif st.session_state.tone == "해요체":
+                            msg = """환불 심사 요청이 접수됐어요. 심사 결과는 내부 규정에 따라 결정돼요.
+                더 궁금한 점이 없으시면 대화를 종료할게요. 종료를 원하시면 '즉시 종료'라고 입력해 주세요."""
+                        else:
+                            msg = """환불 심사 요청 접수됐어. 결과는 내부 규정에 따라 결정돼.
+                더 물어볼 거 없으면 대화 끝낼게. 끝내려면 '즉시 종료'라고 입력해."""
+
+                        st.session_state.chat_log.append(("assistant", msg))
+                        st.chat_message("assistant").write(msg)
+
+                        st.stop()
+
+                    # 🔵 5턴 미만이면 그냥 대화 계속
+                    else:
+
+                        if st.session_state.tone == "격식체":
+                            msg = "환불 심사 요청은 확인되었습니다. 추가로 궁금한 사항이 있으십니까?"
+                        elif st.session_state.tone == "해요체":
+                            msg = "환불 심사 요청은 확인됐어요. 더 궁금한 점 있으신가요?"
+                        else:
+                            msg = "심사 요청 확인했어. 더 물어볼 거 있어?"
+
+                        st.session_state.chat_log.append(("assistant", msg))
+                        st.chat_message("assistant").write(msg)
+
+                        st.stop()
+
+        # ---------------- 추천 상담 종료 의도 판단 ----------------
     if st.session_state.scenario == "recommend":
 
         if not st.session_state.recommend_confirm:
 
-            finish_intent = detect_recommend_finish_intent(user_input)
+            # 🔵 5턴 이후부터만 종료 의도 판단
+            if st.session_state.turn_count >= 5:
+                finish_intent = detect_recommend_finish_intent(user_input)
+            else:
+                finish_intent = False
 
             if finish_intent:
 
@@ -772,7 +765,7 @@ elif st.session_state.phase == "conversation":
 
                 if destination != "NONE":
 
-                    # 🔵 5턴 이상이면 종료 안내 포함
+                    # 🔵 5턴 이상일 때만 종료 안내 가능
                     if st.session_state.turn_count >= 5:
 
                         if st.session_state.tone == "격식체":
@@ -793,20 +786,20 @@ elif st.session_state.phase == "conversation":
 
                         st.stop()
 
-                    # 🔵 5턴 미만이면 바로 설문 이동
+                    # 🔵 5턴 미만이면 대화 계속
                     else:
 
                         if st.session_state.tone == "격식체":
-                            msg = f"{destination} 여행으로 결정하신 것으로 이해하겠습니다. 즐거운 여행 준비가 되시길 바랍니다."
+                            msg = f"{destination} 여행으로 결정하신 것으로 이해하겠습니다. 추가로 궁금한 사항이 있으십니까?"
                         elif st.session_state.tone == "해요체":
-                            msg = f"{destination} 여행으로 결정하신 걸로 이해할게요. 즐거운 여행 준비가 되길 바라요."
+                            msg = f"{destination} 여행으로 결정하신 걸로 이해할게요. 더 궁금한 점 있으신가요?"
                         else:
-                            msg = f"{destination} 여행으로 결정한 거네. 즐거운 여행 준비해."
+                            msg = f"{destination} 여행으로 결정한 거네. 더 물어볼 거 있어?"
 
                         st.session_state.chat_log.append(("assistant", msg))
                         st.chat_message("assistant").write(msg)
 
-                        end_and_go_to_survey()
+                        st.stop()
 
                 else:
 
@@ -833,7 +826,6 @@ elif st.session_state.phase == "conversation":
                 st.session_state.chat_log.append(("assistant", msg))
                 st.chat_message("assistant").write(msg)
                 st.stop()
-
 
     # 🔵 프롬프트 선택
     if st.session_state.scenario == "refund":
