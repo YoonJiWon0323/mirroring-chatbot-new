@@ -653,26 +653,8 @@ elif st.session_state.phase == "conversation":
     if user_input.strip() == "즉시 종료":
         end_and_go_to_survey()
 
-        # ---------------- 환불 종료 의도 GPT 판단 ----------------
+        # ---------------- 환불 종료 의도 판단 ----------------
     if st.session_state.scenario == "refund":
-
-        # ---------------- 5턴 이후 종료 여부 확인 ----------------
-        if st.session_state.turn_count >= 5 and not st.session_state.end_confirm:
-
-            st.session_state.end_confirm = True
-
-            if st.session_state.tone == "격식체":
-                msg = "추가 문의 사항이 없으시다면 상담을 종료하시겠습니까?"
-            elif st.session_state.tone == "해요체":
-                msg = "더 궁금한 점 없으시면 상담을 종료할까요?"
-            else:
-                msg = "더 물어볼 거 없으면 상담 끝낼까?"
-
-            st.session_state.chat_log.append(("assistant", msg))
-            st.chat_message("assistant").write(msg)
-
-            st.stop()
-
 
         # ---------------- 종료 의도 판단 ----------------
         if st.session_state.end_confirm and not st.session_state.refund_confirm:
@@ -695,7 +677,6 @@ elif st.session_state.phase == "conversation":
 
                 st.stop()
 
-
         # ---------------- 심사 요청 확인 ----------------
         if st.session_state.refund_confirm:
 
@@ -707,13 +688,10 @@ elif st.session_state.phase == "conversation":
                 confirm = detect_refund_confirmation(user_input)
 
             if confirm:
-
                 end_and_go_to_survey()
+                st.stop()
 
-        # ---------------- 추천 상담 종료 의도 판단 ----------------
-    if st.session_state.scenario == "recommend":
-
-        # ---------------- 5턴 이후 종료 여부 확인 ----------------
+        # ---------------- 5턴 이후 종료 질문 추가 ----------------
         if st.session_state.turn_count >= 5 and not st.session_state.end_confirm:
 
             st.session_state.end_confirm = True
@@ -725,11 +703,11 @@ elif st.session_state.phase == "conversation":
             else:
                 msg = "더 물어볼 거 없으면 상담 끝낼까?"
 
-            st.session_state.chat_log.append(("assistant", msg))
-            st.chat_message("assistant").write(msg)
+            end_and_go_to_survey()
 
-            st.stop()
 
+        # ---------------- 추천 상담 종료 의도 판단 ----------------
+    if st.session_state.scenario == "recommend":
 
         # ---------------- 종료 의도 판단 ----------------
         if st.session_state.end_confirm and not st.session_state.recommend_confirm:
@@ -752,7 +730,6 @@ elif st.session_state.phase == "conversation":
 
                 st.stop()
 
-
         # ---------------- 여행지 확정 ----------------
         if st.session_state.recommend_confirm:
 
@@ -765,6 +742,20 @@ elif st.session_state.phase == "conversation":
 
             if confirm:
                 end_and_go_to_survey()
+
+        # ---------------- 5턴 이후 종료 질문 추가 ----------------
+        if st.session_state.turn_count >= 5 and not st.session_state.end_confirm:
+
+            st.session_state.end_confirm = True
+
+            if st.session_state.tone == "격식체":
+                msg = "추가 문의 사항이 없으시다면 상담을 종료하시겠습니까?"
+            elif st.session_state.tone == "해요체":
+                msg = "더 궁금한 점 없으시면 상담을 종료할까요?"
+            else:
+                msg = "더 물어볼 거 없으면 상담 끝낼까?"
+
+            end_and_go_to_survey()
 
     # 🔵 프롬프트 선택
     if st.session_state.scenario == "refund":
