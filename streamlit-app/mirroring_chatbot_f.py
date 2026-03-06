@@ -646,9 +646,9 @@ elif st.session_state.phase == "conversation":
     st.session_state.chat_log.append(("user", user_input))
     st.chat_message("user").write(user_input)
 
-    # 턴 카운트 증가
-    st.session_state.turn_count += 1
-    
+    # 사용자 발화 수 계산
+    user_turns = sum(1 for role, _ in st.session_state.chat_log if role == "user")
+
     # 즉시 종료 처리
     if user_input.strip() == "즉시 종료":
         end_and_go_to_survey()
@@ -744,7 +744,7 @@ elif st.session_state.phase == "conversation":
                 end_and_go_to_survey()
 
         # ---------------- 5턴 이후 종료 질문 추가 ----------------
-        if st.session_state.turn_count >= 5 and not st.session_state.end_confirm:
+        if user_turns >= 5 and not st.session_state.end_confirm:
 
             st.session_state.end_confirm = True
 
