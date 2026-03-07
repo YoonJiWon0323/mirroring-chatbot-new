@@ -693,17 +693,25 @@ elif st.session_state.phase == "conversation":
             simple_yes = ["응", "네", "예", "그래", "ㅇㅋ", "ok", "yes"]
 
             if user_input.strip().lower() in simple_yes:
-                confirm = True
+                finish_intent = True
             else:
-                confirm = detect_refund_confirmation(user_input)
+                finish_intent = detect_refund_finish_intent(user_input)
 
-            if confirm:
-                end_and_go_to_survey()
+            if finish_intent:
+
+                st.session_state.refund_confirm = True
+
+                if st.session_state.tone == "격식체":
+                    msg = "환불 심사 진행 요청으로 이해해도 되겠습니까?"
+                elif st.session_state.tone == "해요체":
+                    msg = "환불 심사를 진행해 달라는 요청으로 이해해도 될까요?"
+                else:
+                    msg = "환불 심사 진행 요청으로 이해해도 될까?"
+
+                st.session_state.chat_log.append(("assistant", msg))
+                st.chat_message("assistant").write(msg)
+
                 st.stop()
-
-            else:
-                # 심사 요청 거절 → 상담 계속
-                st.session_state.refund_confirm = False
 
     # ---------------- 여행지 추천 시나리오 ----------------
     elif st.session_state.scenario == "recommend":
@@ -711,9 +719,13 @@ elif st.session_state.phase == "conversation":
         # ---------------- 종료 질문 이후 처리 ----------------
         if st.session_state.end_confirm and not st.session_state.recommend_confirm:
 
-            finish_intent = detect_recommend_finish_intent(user_input)
+            simple_yes = ["응", "네", "예", "그래", "ㅇㅋ", "ok", "yes"]
 
-            # 여행지 확정 의사
+            if user_input.strip().lower() in simple_yes:
+                finish_intent = True
+            else:
+                finish_intent = detect_recommend_finish_intent(user_input)
+
             if finish_intent:
 
                 st.session_state.recommend_confirm = True
@@ -729,10 +741,6 @@ elif st.session_state.phase == "conversation":
                 st.chat_message("assistant").write(msg)
 
                 st.stop()
-
-            # 확정 안함 → 상담 계속
-            else:
-                st.session_state.end_confirm = False
 
 
         # ---------------- 여행지 확정 최종 확인 ----------------
