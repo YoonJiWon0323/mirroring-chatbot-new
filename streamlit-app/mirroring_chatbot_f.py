@@ -665,7 +665,7 @@ elif st.session_state.phase == "conversation":
 
             simple_yes = ["응","네","예","그래","ㅇㅋ","ok","yes"]
 
-            if user_input.strip().lower() in simple_yes:
+            if any(x in user_input.strip().lower() for x in simple_yes):
                 finish_intent = True
             else:
                 finish_intent = detect_refund_finish_intent(user_input)
@@ -695,7 +695,7 @@ elif st.session_state.phase == "conversation":
 
             simple_yes = ["응","네","예","그래","ㅇㅋ","ok","yes"]
 
-            if user_input.strip().lower() in simple_yes:
+            if any(x in user_input.strip().lower() for x in simple_yes):
                 finish_intent = True
             else:
                 finish_intent = detect_refund_finish_intent(user_input)
