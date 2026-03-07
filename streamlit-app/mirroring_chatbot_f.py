@@ -717,8 +717,6 @@ elif st.session_state.phase == "conversation":
             st.session_state.chat_log.append(("assistant", msg))
             st.chat_message("assistant").write(msg)
 
-            st.stop()
-
         # ---------------- 여행지 확정 ----------------
         if st.session_state.recommend_confirm:
 
