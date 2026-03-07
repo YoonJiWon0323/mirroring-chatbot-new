@@ -220,6 +220,7 @@ PROMPT_BLOCK_REFUND = {
 - 사용자의 발화가 환불 심사와 무관한 경우,
   상담 주제가 여행 환불 심사임을 간단히 안내하고
   환불 관련 질문을 다시 요청하십시오.
+  - 인사말은 상담 시작 시 한 번만 사용하십시오. 이후 응답에서는 인사말을 반복하지 마십시오.
 
 [규정 문구]
 환불 여부는 내부 규정에 따라 결정됩니다.
@@ -248,6 +249,7 @@ PROMPT_BLOCK_REFUND = {
 - 사용자의 발화가 환불 심사와 무관한 경우,
   상담 주제가 여행 환불 심사임을 간단히 안내하고
   환불 관련 질문을 다시 요청하십시오.
+  - 인사말은 상담 시작 시 한 번만 사용하십시오. 이후 응답에서는 인사말을 반복하지 마십시오.
 
 [규정 문구]
 환불 여부는 내부 규정에 따라 결정돼요.
@@ -276,6 +278,7 @@ PROMPT_BLOCK_REFUND = {
 - 사용자의 발화가 환불 심사와 무관한 경우,
   상담 주제가 여행 환불 심사임을 간단히 안내하고
   환불 관련 질문을 다시 요청하십시오.
+  - 인사말은 상담 시작 시 한 번만 사용하십시오. 이후 응답에서는 인사말을 반복하지 마십시오.
 
 [규정 문구]
 환불 여부는 내부 규정에 따라 결정돼.
@@ -652,6 +655,7 @@ elif st.session_state.phase == "conversation":
     # 즉시 종료 처리
     if user_input.strip() == "즉시 종료":
         end_and_go_to_survey()
+        st.stop()
 
     # ---------------- 환불 시나리오 ----------------
     if st.session_state.scenario == "refund":
@@ -701,23 +705,37 @@ elif st.session_state.phase == "conversation":
                 # 심사 요청 거절 → 상담 계속
                 st.session_state.refund_confirm = False
 
+    # ---------------- 여행지 추천 시나리오 ----------------
+    elif st.session_state.scenario == "recommend":
 
-        # ---------------- 5턴 이후 종료 질문 ----------------
-        if user_turns >= 5 and not st.session_state.end_confirm:
+        # ---------------- 종료 질문 이후 처리 ----------------
+        if st.session_state.end_confirm and not st.session_state.recommend_confirm:
 
-            st.session_state.end_confirm = True
+            finish_intent = detect_recommend_finish_intent(user_input)
 
-            if st.session_state.tone == "격식체":
-                msg = "추가 문의 사항이 없으시다면 상담을 종료하시겠습니까?"
-            elif st.session_state.tone == "해요체":
-                msg = "더 궁금한 점 없으시면 상담을 종료할까요?"
+            # 여행지 확정 의사
+            if finish_intent:
+
+                st.session_state.recommend_confirm = True
+
+                if st.session_state.tone == "격식체":
+                    msg = "추천된 여행지로 결정하신 것으로 이해해도 되겠습니까?"
+                elif st.session_state.tone == "해요체":
+                    msg = "추천된 여행지로 결정하신 걸로 이해해도 될까요?"
+                else:
+                    msg = "추천한 여행지로 정한 거 맞아?"
+
+                st.session_state.chat_log.append(("assistant", msg))
+                st.chat_message("assistant").write(msg)
+
+                st.stop()
+
+            # 확정 안함 → 상담 계속
             else:
-                msg = "더 물어볼 거 없으면 상담 끝낼까?"
+                st.session_state.end_confirm = False
 
-            st.session_state.chat_log.append(("assistant", msg))
-            st.chat_message("assistant").write(msg)
 
-        # ---------------- 여행지 확정 ----------------
+        # ---------------- 여행지 확정 최종 확인 ----------------
         if st.session_state.recommend_confirm:
 
             simple_yes = ["응", "네", "예", "그래", "ㅇㅋ", "ok", "yes"]
@@ -731,21 +749,9 @@ elif st.session_state.phase == "conversation":
                 end_and_go_to_survey()
                 st.stop()
 
-        # ---------------- 5턴 이후 종료 질문 추가 ----------------
-        if user_turns >= 5 and not st.session_state.end_confirm:
-
-            st.session_state.end_confirm = True
-
-            if st.session_state.tone == "격식체":
-                msg = "추가 문의 사항이 없으시다면 상담을 종료하시겠습니까?"
-            elif st.session_state.tone == "해요체":
-                msg = "더 궁금한 점 없으시면 상담을 종료할까요?"
             else:
-                msg = "더 물어볼 거 없으면 상담 끝낼까?"
-
-            st.session_state.chat_log.append(("assistant", msg))
-            st.chat_message("assistant").write(msg)
-            st.stop()
+                # 여행지 확정 거절 → 상담 계속
+                st.session_state.recommend_confirm = False
 
     # 🔵 프롬프트 선택
     if st.session_state.scenario == "refund":
@@ -771,6 +777,33 @@ elif st.session_state.phase == "conversation":
 
     st.session_state.chat_log.append(("assistant", reply))
     st.chat_message("assistant").write(reply)
+
+    # ---------------- 5턴 이후 종료 질문 추가 ----------------
+    if user_turns >= 5 and not st.session_state.end_confirm:
+
+        st.session_state.end_confirm = True
+
+        if st.session_state.scenario == "refund":
+
+            if st.session_state.tone == "격식체":
+                msg = "추가 문의 사항이 없으시다면 상담을 종료하시겠습니까?"
+            elif st.session_state.tone == "해요체":
+                msg = "더 궁금한 점 없으시면 상담을 종료할까요?"
+            else:
+                msg = "더 물어볼 거 없으면 상담 끝낼까?"
+
+        else:
+
+            if st.session_state.tone == "격식체":
+                msg = "추가로 탐색할 여행지가 없으시면 상담을 종료하시겠습니까?"
+            elif st.session_state.tone == "해요체":
+                msg = "더 찾아볼 여행지가 없으면 상담을 종료할까요?"
+            else:
+                msg = "더 찾을 여행지 없으면 여기서 끝낼까?"
+
+        st.session_state.chat_log.append(("assistant", msg))
+        st.chat_message("assistant").write(msg)
+        st.stop()
     
 
 # --------------------------------------------------
