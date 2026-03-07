@@ -665,7 +665,7 @@ elif st.session_state.phase == "conversation":
 
             simple_yes = ["응","네","예","그래","ㅇㅋ","ok","yes"]
 
-            if any(x in user_input.strip().lower() for x in simple_yes):
+            if user_input.strip().lower() in simple_yes:
                 finish_intent = True
             else:
                 finish_intent = detect_refund_finish_intent(user_input)
@@ -685,7 +685,24 @@ elif st.session_state.phase == "conversation":
                 st.chat_message("assistant").write(msg)
 
                 st.stop()
+            
+        # ---------------- 환불 심사 최종 확인 ----------------
+        if st.session_state.refund_confirm:
 
+            simple_yes = ["응","네","예","그래","ㅇㅋ","ok","yes"]
+
+            if user_input.strip().lower() in simple_yes:
+                confirm = True
+            else:
+                confirm = detect_refund_confirmation(user_input)
+
+            if confirm:
+                end_and_go_to_survey()
+                st.stop()
+
+            else:
+                # 심사 요청 거절 → 상담 계속
+                st.session_state.refund_confirm = False
 
     # ---------------- 여행지 추천 시나리오 ----------------
     elif st.session_state.scenario == "recommend":
@@ -695,7 +712,7 @@ elif st.session_state.phase == "conversation":
 
             simple_yes = ["응","네","예","그래","ㅇㅋ","ok","yes"]
 
-            if any(x in user_input.strip().lower() for x in simple_yes):
+            if user_input.strip().lower() in simple_yes:
                 finish_intent = True
             else:
                 finish_intent = detect_refund_finish_intent(user_input)
