@@ -124,9 +124,6 @@ if "step_index" not in st.session_state:
 if "chat_log" not in st.session_state:
     st.session_state.chat_log = []
 
-if "turn_count" not in st.session_state:
-    st.session_state.turn_count = 0
-
 if "end_confirm" not in st.session_state:
     st.session_state.end_confirm = False
 
@@ -692,7 +689,7 @@ elif st.session_state.phase == "conversation":
                 st.stop()
 
         # ---------------- 5턴 이후 종료 질문 추가 ----------------
-        if st.session_state.turn_count >= 5 and not st.session_state.end_confirm:
+        if user_turns >= 5 and not st.session_state.end_confirm:
 
             st.session_state.end_confirm = True
 
@@ -703,7 +700,10 @@ elif st.session_state.phase == "conversation":
             else:
                 msg = "더 물어볼 거 없으면 상담 끝낼까?"
 
-            end_and_go_to_survey()
+            st.session_state.chat_log.append(("assistant", msg))
+            st.chat_message("assistant").write(msg)
+
+            st.stop()
 
 
         # ---------------- 추천 상담 종료 의도 판단 ----------------
@@ -742,6 +742,7 @@ elif st.session_state.phase == "conversation":
 
             if confirm:
                 end_and_go_to_survey()
+                st.stop()
 
         # ---------------- 5턴 이후 종료 질문 추가 ----------------
         if user_turns >= 5 and not st.session_state.end_confirm:
@@ -755,7 +756,9 @@ elif st.session_state.phase == "conversation":
             else:
                 msg = "더 물어볼 거 없으면 상담 끝낼까?"
 
-            end_and_go_to_survey()
+            st.session_state.chat_log.append(("assistant", msg))
+            st.chat_message("assistant").write(msg)
+            st.stop()
 
     # 🔵 프롬프트 선택
     if st.session_state.scenario == "refund":
