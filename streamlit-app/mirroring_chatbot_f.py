@@ -708,7 +708,7 @@ elif st.session_state.phase == "conversation":
     elif st.session_state.scenario == "recommend":
 
         # ---------------- 종료 질문 이후 처리 ----------------
-        if st.session_state.end_confirm and not st.session_state.refund_confirm:
+        if st.session_state.end_confirm and not st.session_state.recommend_confirm:
 
             simple_yes = ["응","네","예","그래","ㅇㅋ","ok","yes"]
 
