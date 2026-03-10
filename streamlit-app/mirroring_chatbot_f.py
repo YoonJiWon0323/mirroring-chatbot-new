@@ -58,6 +58,7 @@ def insert_headers_if_empty(worksheet, headers):
 insert_headers_if_empty(survey_ws, [
     "timestamp",
     "user_id",
+    "email",
 
     # 실험 조건
     "scenario",
@@ -442,6 +443,38 @@ def end_and_go_to_survey():
     st.session_state.phase = "consent"
     st.rerun()
 
+def detect_finish_intent(user_input):
+
+    prompt = f"""
+다음 사용자 발화가 상담 종료 의도인지 판단하십시오.
+
+YES 또는 NO만 출력하십시오.
+
+종료 의도 예:
+네
+이제 됐어요
+여기까지 할게요
+그만할게요
+더 물어볼 거 없어요
+끝낼게요
+
+종료 의도가 아니면 NO를 출력하십시오.
+
+사용자 발화:
+{user_input}
+"""
+
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        temperature=0,
+        messages=[
+            {"role": "system", "content": "판정만 수행하십시오."},
+            {"role": "user", "content": prompt}
+        ]
+    )
+
+    return response.choices[0].message.content.strip() == "YES"
+
 def detect_refund_confirmation(user_input):
 
     prompt = f"""
@@ -661,96 +694,111 @@ elif st.session_state.phase == "conversation":
     if st.session_state.scenario == "refund":
 
         # ---------------- 종료 질문 이후 처리 ----------------
-        if st.session_state.end_confirm and not st.session_state.refund_confirm:
+        if st.session_state.end_confirm:
 
-            simple_yes = ["응","네","예","그래","ㅇㅋ","ok","yes"]
+            style = st.session_state.tone
 
-            if user_input.strip().lower() in simple_yes:
-                finish_intent = True
+            continue_msg = {
+                "격식체": "추가로 궁금하신 사항이 있으시면 말씀해 주십시오.",
+                "해요체": "추가로 궁금한 사항이 있으시면 말씀해 주세요.",
+                "반말체": "추가로 궁금한 거 있으면 말해."
+            }
+
+            end_msg = {
+                "격식체": "상담을 종료하시겠습니까?",
+                "해요체": "상담을 종료할까요?",
+                "반말체": "상담 종료할까?"
+            }
+
+            clean = user_input.strip()
+
+            simple_yes = ["ㅇㅇ","네","네네","넵","예","응","응응","맞아요","맞아","그래요","그래"]
+            simple_no = ["ㄴㄴ","아니","아니요","아직","더 물어볼게요","더 물어볼게"]
+
+            # 1️⃣ 룰 기반 판단
+            if clean in simple_yes:
+                decision = "YES"
+
+            elif clean in simple_no:
+                decision = "NO"
+
+            # 2️⃣ GPT fallback
             else:
-                finish_intent = detect_refund_finish_intent(user_input)
-
-            if finish_intent:
-
-                st.session_state.refund_confirm = True
-
-                if st.session_state.tone == "격식체":
-                    msg = "환불 심사 진행 요청으로 이해해도 되겠습니까?"
-                elif st.session_state.tone == "해요체":
-                    msg = "환불 심사를 진행해 달라는 요청으로 이해해도 될까요?"
+                if detect_finish_intent(clean):
+                    decision = "YES"
                 else:
-                    msg = "환불 심사 진행 요청으로 이해해도 될까?"
+                    decision = "NO"
 
+            # 3️⃣ 결과 처리
+            if decision == "YES":
+
+                st.session_state.phase = "consent"
+                st.rerun()
+                st.stop()
+
+            elif decision == "NO":
+
+                st.session_state.end_confirm = False
+
+                msg = continue_msg[style]
                 st.session_state.chat_log.append(("assistant", msg))
                 st.chat_message("assistant").write(msg)
-
                 st.stop()
-            
-        # ---------------- 환불 심사 최종 확인 ----------------
-        if st.session_state.refund_confirm:
-
-            simple_yes = ["응","네","예","그래","ㅇㅋ","ok","yes"]
-
-            if user_input.strip().lower() in simple_yes:
-                confirm = True
-            else:
-                confirm = detect_refund_confirmation(user_input)
-
-            if confirm:
-                end_and_go_to_survey()
-                st.stop()
-
-            else:
-                # 심사 요청 거절 → 상담 계속
-                st.session_state.refund_confirm = False
 
     # ---------------- 여행지 추천 시나리오 ----------------
     elif st.session_state.scenario == "recommend":
 
         # ---------------- 종료 질문 이후 처리 ----------------
-        if st.session_state.end_confirm and not st.session_state.recommend_confirm:
+        if st.session_state.end_confirm:
 
-            simple_yes = ["응","네","예","그래","ㅇㅋ","ok","yes"]
+            style = st.session_state.tone
 
-            if user_input.strip().lower() in simple_yes:
-                finish_intent = True
+            continue_msg = {
+                "격식체": "추가로 탐색할 여행 아이디어가 있으시면 말씀해 주십시오.",
+                "해요체": "추가로 탐색할 여행 아이디어가 있으면 말씀해 주세요.",
+                "반말체": "더 찾아볼 여행 아이디어 있으면 말해."
+            }
+
+            end_msg = {
+                "격식체": "여행 아이디어 탐색을 종료하시겠습니까?",
+                "해요체": "여행 아이디어 탐색을 종료할까요?",
+                "반말체": "여행 아이디어 탐색 끝낼까?"
+            }
+
+            clean = user_input.strip()
+
+            simple_yes = ["ㅇㅇ","네","네네","넵","예","응","응응","맞아요","맞아","그래요","그래"]
+            simple_no = ["ㄴㄴ","아니","아니요","아직","더 물어볼게요","더 물어볼게"]
+
+            # 1️⃣ 룰 기반 판단
+            if clean in simple_yes:
+                decision = "YES"
+
+            elif clean in simple_no:
+                decision = "NO"
+
+            # 2️⃣ GPT fallback
             else:
-                finish_intent = detect_refund_finish_intent(user_input)
-
-            if finish_intent:
-
-                st.session_state.recommend_confirm = True
-
-                if st.session_state.tone == "격식체":
-                    msg = "추천된 여행지로 결정하신 것으로 이해해도 되겠습니까?"
-                elif st.session_state.tone == "해요체":
-                    msg = "추천된 여행지로 결정하신 걸로 이해해도 될까요?"
+                if detect_finish_intent(clean):
+                    decision = "YES"
                 else:
-                    msg = "추천한 여행지로 정한 거 맞아?"
+                    decision = "NO"
 
+            # 3️⃣ 결과 처리
+            if decision == "YES":
+
+                st.session_state.phase = "consent"
+                st.rerun()
+                st.stop()
+
+            elif decision == "NO":
+
+                st.session_state.end_confirm = False
+
+                msg = continue_msg[style]
                 st.session_state.chat_log.append(("assistant", msg))
                 st.chat_message("assistant").write(msg)
-
                 st.stop()
-
-
-        # ---------------- 여행지 확정 최종 확인 ----------------
-        if st.session_state.recommend_confirm:
-
-            simple_yes = ["응", "네", "예", "그래", "ㅇㅋ", "ok", "yes"]
-
-            if user_input.strip().lower() in simple_yes:
-                confirm = True
-            else:
-                confirm = detect_recommend_confirmation(user_input)
-
-            if confirm:
-                end_and_go_to_survey()
-                st.stop()
-
-            else:
-                # 여행지 확정 거절 → 상담 계속
-                st.session_state.recommend_confirm = False
 
     # 🔵 프롬프트 선택
     if st.session_state.scenario == "refund":
@@ -816,13 +864,14 @@ elif st.session_state.get("phase") == "consent":
     # -------------------------------
     # 인구통계
     # -------------------------------
-    demo_gender = st.radio("성별을 선택해 주세요:", ["선택 안 함", "남성", "여성", "기타"])
-    demo_age = st.selectbox("연령대를 선택해 주세요:", ["선택 안 함", "10대", "20대", "30대", "40대", "50대 이상"])
-    demo_edu = st.selectbox("최종 학력을 선택해 주세요:", ["선택 안 함", "고등학교 졸업 이하", "대학교 재학/졸업", "대학원 재학/졸업"])
+    demo_gender = st.radio("성별을 선택해 주세요:", ["남성", "여성", "기타"])
+    demo_age = st.radio("연령대를 선택해 주세요:", ["10대", "20대", "30대", "40대", "50대 이상"])
+    demo_edu = st.radio("최종 학력을 선택해 주세요:", ["고등학교 졸업 이하", "대학교 재학/졸업", "대학원 재학/졸업"])
     demo_job = st.text_input("현재 직업을 입력해 주세요 (예: 대학생, 회사원 등)")
+    demo_email = st.text_input("연락 가능한 개인 이메일을 입력해 주세요 ")
 
     # ✅ 5점 척도
-    scale = ["선택 안 함", "전혀 아니다", "아니다", "보통이다", "그렇다", "매우 그렇다"]
+    scale = ["전혀 아니다", "아니다", "보통이다", "그렇다", "매우 그렇다"]
 
     # -------------------------------
     # 1️⃣ 조작점검 – 권력 인지
@@ -884,10 +933,11 @@ elif st.session_state.get("phase") == "consent":
         # 유효성 검사
         # -------------------------------
         if (
-            demo_gender == "선택 안 함" or
-            demo_age == "선택 안 함" or
-            demo_edu == "선택 안 함" or
+            demo_gender is None or
+            demo_age is None or
+            demo_edu is None or
             demo_job.strip() == "" or
+            demo_email.strip() == "" or
 
             power1 is None or power2 is None or power3 is None or
             tone1 is None or tone2 is None or tone3 is None or
@@ -897,7 +947,8 @@ elif st.session_state.get("phase") == "consent":
             comp1 is None or comp2 is None or comp3 is None or
             exp1 is None or exp2 is None or exp3 is None or exp4 is None
         ):
-            st.warning("⚠️ 모든 항목에 응답해 주세요. 응답하지 않은 항목이 있습니다.")
+            st.error("⚠️ 응답하지 않은 문항이 있습니다. 모든 항목을 체크해야 제출할 수 있습니다.")
+            st.stop()
         else:
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -905,6 +956,7 @@ elif st.session_state.get("phase") == "consent":
             survey_row = [
                 timestamp,
                 st.session_state.user_id,
+                demo_email,
 
                 # 실험 조건
                 st.session_state.scenario,
