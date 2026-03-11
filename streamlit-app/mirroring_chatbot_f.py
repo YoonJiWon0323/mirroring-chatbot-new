@@ -817,7 +817,7 @@ elif st.session_state.phase == "conversation":
 
     # ---------------- 5턴 이후 종료 질문 추가 ----------------
     # 먼저 종료 질문 체크
-    if user_turns == 5 and not st.session_state.end_confirm:
+    if user_turns >= 5 and not st.session_state.end_confirm:
 
         st.session_state.end_confirm = True
 
