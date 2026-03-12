@@ -836,12 +836,12 @@ elif st.session_state.phase == "conversation":
 
     for role, message in st.session_state.chat_log:
         messages.append({"role": role, "content": message})
-    
-   # GPT 호출
+
+    # 🔵 GPT 호출
     response = client.chat.completions.create(
-    model="gpt-4o",
-    temperature=0.7,
-    messages=messages
+        model="gpt-4o",
+        temperature=0.7,
+        messages=messages
     )
 
     reply = response.choices[0].message.content.strip()
@@ -849,19 +849,33 @@ elif st.session_state.phase == "conversation":
     st.session_state.chat_log.append(("assistant", reply))
     st.chat_message("assistant").write(reply)
 
-    # ---------------- 5턴 이후 종료 질문 ----------------
+    # ---------------- 5턴 이후 종료 질문 추가 ----------------
     if user_turns >= 5 and not st.session_state.end_confirm and not st.session_state.end_question_asked:
 
         st.session_state.end_confirm = True
-        st.session_state.end_question_asked = True   # ⭐ 이 줄 추가
 
-        msg = random.choice(END_QUESTIONS[st.session_state.tone])
+        if st.session_state.scenario == "refund":
+
+            if st.session_state.tone == "격식체":
+                msg = "추가 문의 사항이 없으시다면 상담을 종료하시겠습니까?"
+            elif st.session_state.tone == "해요체":
+                msg = "더 궁금한 점 없으시면 상담을 종료할까요?"
+            else:
+                msg = "더 물어볼 거 없으면 상담 끝낼까?"
+
+        else:
+
+            if st.session_state.tone == "격식체":
+                msg = "추가로 탐색할 여행지가 없으시면 상담을 종료하시겠습니까?"
+            elif st.session_state.tone == "해요체":
+                msg = "더 찾아볼 여행지가 없으면 상담을 종료할까요?"
+            else:
+                msg = "더 찾을 여행지 없으면 여기서 끝낼까?"
 
         st.session_state.chat_log.append(("assistant", msg))
         st.chat_message("assistant").write(msg)
+        st.stop()
 
-        st.stop()   # ⭐ GPT 호출 막기
-    
 # --------------------------------------------------
 # 파트 4: 설문 + Google Sheets 저장
 # --------------------------------------------------
