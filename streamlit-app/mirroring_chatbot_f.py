@@ -847,12 +847,7 @@ elif st.session_state.phase == "conversation":
 
         st.session_state.chat_log.append(("assistant", msg))
         st.chat_message("assistant").write(msg)
-            
-        reply = response.choices[0].message.content.strip()
-
-        st.session_state.chat_log.append(("assistant", reply))
-        st.chat_message("assistant").write(reply)
-
+    
 # --------------------------------------------------
 # 파트 4: 설문 + Google Sheets 저장
 # --------------------------------------------------
