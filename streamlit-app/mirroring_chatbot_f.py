@@ -826,20 +826,20 @@ elif st.session_state.phase == "conversation":
         if st.session_state.scenario == "refund":
 
             if st.session_state.tone == "격식체":
-                msg = "추가 문의 사항이 없으시다면 상담을 종료하시겠습니까?"
+                msg = "추가 문의 사항이 있습니까?"
             elif st.session_state.tone == "해요체":
-                msg = "더 궁금한 점 없으시면 상담을 종료할까요?"
+                msg = "더 궁금한 점 있으신가요?"
             else:
-                msg = "더 물어볼 거 없으면 상담 끝낼까?"
+                msg = "더 물어볼 거 있어?"
 
         else:
 
             if st.session_state.tone == "격식체":
-                msg = "추가로 탐색할 여행지가 없으시면 상담을 종료하시겠습니까?"
+                msg = "추가로 탐색할 여행지가 없습니까?"
             elif st.session_state.tone == "해요체":
-                msg = "더 찾아볼 여행지가 없으면 상담을 종료할까요?"
+                msg = "더 찾아볼 여행지가 없으신가요?"
             else:
-                msg = "더 찾을 여행지 없으면 여기서 끝낼까?"
+                msg = "더 찾을 여행지 없어?"
 
         st.session_state.chat_log.append(("assistant", msg))
         st.chat_message("assistant").write(msg)
