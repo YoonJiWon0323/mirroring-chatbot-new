@@ -737,12 +737,10 @@ elif st.session_state.phase == "conversation":
 
             elif decision == "NO":
 
+                # 종료 질문 상태 해제
                 st.session_state.end_confirm = False
 
-                msg = continue_msg[style]
-                st.session_state.chat_log.append(("assistant", msg))
-                st.chat_message("assistant").write(msg)
-                st.stop()
+                # GPT가 자연스럽게 응답하도록 그냥 계속 진행
 
     # ---------------- 여행지 추천 시나리오 ----------------
     elif st.session_state.scenario == "recommend":
@@ -791,12 +789,10 @@ elif st.session_state.phase == "conversation":
 
             elif decision == "NO":
 
+                # 종료 질문 상태 해제
                 st.session_state.end_confirm = False
 
-                msg = continue_msg[style]
-                st.session_state.chat_log.append(("assistant", msg))
-                st.chat_message("assistant").write(msg)
-                st.stop()
+                # GPT가 자연스럽게 응답하도록 그냥 계속 진행
 
     # 🔵 프롬프트 선택
     if st.session_state.scenario == "refund":
