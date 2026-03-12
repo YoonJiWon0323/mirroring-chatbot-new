@@ -709,7 +709,6 @@ elif st.session_state.phase == "conversation":
     st.session_state.chat_log.append(("user", user_input))
     st.chat_message("user").write(user_input)
 
-    # ⭐ 종료 의도 먼저 감지
     if detect_finish_intent(user_input):
         end_and_go_to_survey()
         st.stop()
@@ -860,6 +859,8 @@ elif st.session_state.phase == "conversation":
 
         st.session_state.chat_log.append(("assistant", msg))
         st.chat_message("assistant").write(msg)
+
+        st.stop()   # ⭐ GPT 호출 막기
     
 # --------------------------------------------------
 # 파트 4: 설문 + Google Sheets 저장
