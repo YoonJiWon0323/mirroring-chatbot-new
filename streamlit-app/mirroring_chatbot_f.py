@@ -810,7 +810,19 @@ elif st.session_state.phase == "conversation":
     for role, message in st.session_state.chat_log:
         messages.append({"role": role, "content": message})
     
-   # ---------------- 5턴 이후 종료 질문 ----------------
+   # GPT 호출
+    response = client.chat.completions.create(
+    model="gpt-4o",
+    temperature=0.7,
+    messages=messages
+    )
+
+    reply = response.choices[0].message.content.strip()
+
+    st.session_state.chat_log.append(("assistant", reply))
+    st.chat_message("assistant").write(reply)
+
+    # ---------------- 5턴 이후 종료 질문 ----------------
     if user_turns >= 5 and not st.session_state.end_confirm:
 
         st.session_state.end_confirm = True
@@ -835,20 +847,11 @@ elif st.session_state.phase == "conversation":
 
         st.session_state.chat_log.append(("assistant", msg))
         st.chat_message("assistant").write(msg)
-        st.stop()
+            
+        reply = response.choices[0].message.content.strip()
 
-
-    # 🔵 GPT 호출
-    response = client.chat.completions.create(
-        model="gpt-4o",
-        temperature=0.7,
-        messages=messages
-    )
-        
-    reply = response.choices[0].message.content.strip()
-
-    st.session_state.chat_log.append(("assistant", reply))
-    st.chat_message("assistant").write(reply)
+        st.session_state.chat_log.append(("assistant", reply))
+        st.chat_message("assistant").write(reply)
 
 # --------------------------------------------------
 # 파트 4: 설문 + Google Sheets 저장
