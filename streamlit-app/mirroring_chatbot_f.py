@@ -732,8 +732,7 @@ elif st.session_state.phase == "conversation":
             # 3️⃣ 결과 처리
             if decision == "YES":
 
-                st.session_state.phase = "consent"
-                st.rerun()
+                end_and_go_to_survey()
                 st.stop()
 
             elif decision == "NO":
@@ -787,8 +786,7 @@ elif st.session_state.phase == "conversation":
             # 3️⃣ 결과 처리
             if decision == "YES":
 
-                st.session_state.phase = "consent"
-                st.rerun()
+                end_and_go_to_survey()
                 st.stop()
 
             elif decision == "NO":
@@ -847,7 +845,6 @@ elif st.session_state.phase == "conversation":
         messages=messages
     )
         
-
     reply = response.choices[0].message.content.strip()
 
     st.session_state.chat_log.append(("assistant", reply))
