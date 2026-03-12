@@ -478,6 +478,30 @@ YES 또는 NO만 출력하십시오.
 
     return response.choices[0].message.content.strip() == "YES"
 
+END_QUESTIONS = {
+
+    "격식체": [
+        "추가로 궁금하신 사항이 없다면 상담을 종료하시겠습니까?",
+        "더 확인하실 내용이 없다면 상담을 마칠까요?",
+        "추가 문의가 없으시면 여기서 상담을 종료하겠습니다. 괜찮으십니까?",
+        "더 확인하실 사항이 없다면 상담을 마무리해도 될까요?"
+    ],
+
+    "해요체": [
+        "더 궁금한 점 없으시면 상담을 종료할까요?",
+        "추가로 확인하고 싶은 게 없으면 여기서 마칠까요?",
+        "더 알아볼 여행지가 없으면 상담을 끝낼까요?",
+        "궁금한 게 더 없으면 여기서 마무리할게요."
+    ],
+
+    "반말체": [
+        "더 찾을 여행지 없으면 여기서 끝낼까?",
+        "더 궁금한 거 없어?",
+        "다른 여행지 더 볼까, 아니면 여기서 마칠까?",
+        "더 추천 받아볼래, 아니면 이제 끝낼까?"
+    ]
+}
+
 def detect_refund_confirmation(user_input):
 
     prompt = f"""
@@ -825,24 +849,9 @@ elif st.session_state.phase == "conversation":
     if user_turns >= 5 and not st.session_state.end_confirm and not st.session_state.end_question_asked:
 
         st.session_state.end_confirm = True
+        st.session_state.end_question_asked = True   # ⭐ 이 줄 추가
 
-        if st.session_state.scenario == "refund":
-
-            if st.session_state.tone == "격식체":
-                msg = "추가 문의 사항이 있습니까?"
-            elif st.session_state.tone == "해요체":
-                msg = "더 궁금한 점 있으신가요?"
-            else:
-                msg = "더 물어볼 거 있어?"
-
-        else:
-
-            if st.session_state.tone == "격식체":
-                msg = "추가로 탐색할 여행지가 없습니까?"
-            elif st.session_state.tone == "해요체":
-                msg = "더 찾아볼 여행지가 없으신가요?"
-            else:
-                msg = "더 찾을 여행지 없어?"
+        msg = random.choice(END_QUESTIONS[st.session_state.tone])
 
         st.session_state.chat_log.append(("assistant", msg))
         st.chat_message("assistant").write(msg)
