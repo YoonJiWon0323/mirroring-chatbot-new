@@ -813,7 +813,7 @@ elif st.session_state.phase == "conversation":
         messages.append({"role": role, "content": message})
     
    # ---------------- 5턴 이후 종료 질문 ----------------
-    if user_turns >= 5 and not st.session_state.end_confirm and detect_finish_intent(user_input):
+    if user_turns >= 5 and not st.session_state.end_confirm:
 
         st.session_state.end_confirm = True
 
