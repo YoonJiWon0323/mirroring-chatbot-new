@@ -58,7 +58,6 @@ def insert_headers_if_empty(worksheet, headers):
 insert_headers_if_empty(survey_ws, [
     "timestamp",
     "user_id",
-    "email",
 
     # 실험 조건
     "scenario",
@@ -970,7 +969,6 @@ elif st.session_state.get("phase") == "consent":
         demo_age = st.radio("연령대를 선택해 주세요:", ["10대", "20대", "30대", "40대", "50대 이상"])
         demo_edu = st.radio("최종 학력을 선택해 주세요:", ["고등학교 졸업 이하", "대학교 재학/졸업", "대학원 재학/졸업"])
         demo_job = st.text_input("현재 직업을 입력해 주세요 (예: 대학생, 회사원 등)")
-        demo_email = st.text_input("연락 가능한 개인 이메일을 입력해 주세요 ")
 
         # ✅ 5점 척도
         scale = ["전혀 아니다", "아니다", "보통이다", "그렇다", "매우 그렇다"]
@@ -1040,7 +1038,6 @@ elif st.session_state.get("phase") == "consent":
             demo_age is None or
             demo_edu is None or
             demo_job.strip() == "" or
-            demo_email.strip() == "" or
 
             power1 is None or power2 is None or 
             tone1 is None or 
@@ -1059,7 +1056,6 @@ elif st.session_state.get("phase") == "consent":
             survey_row = [
                 timestamp,
                 st.session_state.user_id,
-                demo_email,
 
                 # 실험 조건
                 st.session_state.scenario,
