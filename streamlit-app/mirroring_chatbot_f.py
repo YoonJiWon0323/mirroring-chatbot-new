@@ -709,6 +709,11 @@ elif st.session_state.phase == "conversation":
     st.session_state.chat_log.append(("user", user_input))
     st.chat_message("user").write(user_input)
 
+    # ⭐ 종료 의도 먼저 감지
+    if detect_finish_intent(user_input):
+        end_and_go_to_survey()
+        st.stop()
+
     # 사용자 발화 수 계산
     user_turns = sum(1 for role, _ in st.session_state.chat_log if role == "user")
 
@@ -1023,11 +1028,11 @@ elif st.session_state.get("phase") == "consent":
             demo_job.strip() == "" or
             demo_email.strip() == "" or
 
-            power1 is None or power2 is None or power3 is None or
-            tone1 is None or tone2 is None or tone3 is None or
-            sat1 is None or sat2 is None or sat3 is None or
+            power1 is None or power2 is None or 
+            tone1 is None or 
+            sat1 is None or sat2 is None or sat3 is None or sat4 is None or
             app1 is None or app2 is None or app3 is None or
-            rude1 is None or rude2 is None or
+            rude1 is None or rude2 is None or rude3 is None or rude4 is None or
             comp1 is None or comp2 is None or comp3 is None or
             exp1 is None or exp2 is None or exp3 is None or exp4 is None
         ):
