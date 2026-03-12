@@ -811,13 +811,9 @@ elif st.session_state.phase == "conversation":
 
     for role, message in st.session_state.chat_log:
         messages.append({"role": role, "content": message})
-
-
-
-
-    # ---------------- 5턴 이후 종료 질문 추가 ----------------
-    # 먼저 종료 질문 체크
-    if user_turns >= 5 and not st.session_state.end_confirm:
+    
+   # ---------------- 5턴 이후 종료 질문 ----------------
+    if user_turns >= 5 and not st.session_state.end_confirm and detect_finish_intent(user_input):
 
         st.session_state.end_confirm = True
 
@@ -842,13 +838,15 @@ elif st.session_state.phase == "conversation":
         st.session_state.chat_log.append(("assistant", msg))
         st.chat_message("assistant").write(msg)
         st.stop()
-    
+
+
     # 🔵 GPT 호출
     response = client.chat.completions.create(
         model="gpt-4o",
         temperature=0.7,
         messages=messages
     )
+        
 
     reply = response.choices[0].message.content.strip()
 
