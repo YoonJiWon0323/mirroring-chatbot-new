@@ -71,17 +71,17 @@ insert_headers_if_empty(survey_ws, [
     "job",
 
     # 조작점검
-    "power1","power2","power3",
-    "tone1","tone2","tone3",
+    "power1","power2",
+    "tone1",
 
     # 종속
-    "sat1","sat2","sat3",
+    "sat1","sat2","sat3","sat4"
 
     # 매개
     "app1","app2","app3",
 
     # 통제
-    "rude1","rude2",
+    "rude1","rude2","rude3","rude4",
     "comp1","comp2","comp3",
 
     # AI 노출
@@ -130,6 +130,9 @@ if "end_confirm" not in st.session_state:
 
 if "last_role" not in st.session_state:
     st.session_state.last_role = None
+
+if "end_question_asked" not in st.session_state:
+    st.session_state.end_question_asked = False
 
     
 # --------------------------------------------------
@@ -819,7 +822,7 @@ elif st.session_state.phase == "conversation":
     st.chat_message("assistant").write(reply)
 
     # ---------------- 5턴 이후 종료 질문 ----------------
-    if user_turns >= 5 and not st.session_state.end_confirm:
+    if user_turns >= 5 and not st.session_state.end_confirm and not st.session_state.end_question_asked:
 
         st.session_state.end_confirm = True
 
@@ -853,67 +856,148 @@ elif st.session_state.get("phase") == "consent":
     st.write("아래 항목에 응답해 주세요. 응답은 자동 저장되며, 대화 내용 저장은 선택사항입니다.")
 
     # -------------------------------
-    # 인구통계
+    # 환불 설문
     # -------------------------------
-    demo_gender = st.radio("성별을 선택해 주세요:", ["남성", "여성"])
-    demo_age = st.radio("연령대를 선택해 주세요:", ["10대", "20대", "30대", "40대", "50대 이상"])
-    demo_edu = st.radio("최종 학력을 선택해 주세요:", ["고등학교 졸업 이하", "대학교 재학/졸업", "대학원 재학/졸업"])
-    demo_job = st.text_input("현재 직업을 입력해 주세요 (예: 대학생, 회사원 등)")
-    demo_email = st.text_input("연락 가능한 개인 이메일을 입력해 주세요 ")
+    if st.session_state.scenario == "refund":
 
-    # ✅ 5점 척도
-    scale = ["전혀 아니다", "아니다", "보통이다", "그렇다", "매우 그렇다"]
+        st.subheader("🔒 환불 상담 설문")
+        st.write("아래 항목에 응답해 주세요.")
+
+        # -------------------------------
+        # 인구통계
+        # -------------------------------
+        demo_gender = st.radio("성별을 선택해 주세요:", ["남성", "여성"])
+        demo_age = st.radio("연령대를 선택해 주세요:", ["10대", "20대", "30대", "40대", "50대 이상"])
+        demo_edu = st.radio("최종 학력을 선택해 주세요:", ["고등학교 졸업 이하", "대학교 재학/졸업", "대학원 재학/졸업"])
+        demo_job = st.text_input("현재 직업을 입력해 주세요 (예: 대학생, 회사원 등)")
+        demo_email = st.text_input("연락 가능한 개인 이메일을 입력해 주세요 ")
+
+        # ✅ 5점 척도
+        scale = ["전혀 아니다", "아니다", "보통이다", "그렇다", "매우 그렇다"]
+
+        # -------------------------------
+        # 1️⃣ 조작점검 – 권력 인지
+        # -------------------------------
+        power1 = st.radio("이 대화에서 환불 선택에 대한 최종 결정권은 나에게 있었다 ", scale, index=None)
+        power2 = st.radio("AI가 아니라 내가 환불 선택에 대한 결과를 통제한다고 느꼈다.", scale, index=None)
+
+        # -------------------------------
+        # 2️⃣ 조작점검 – 말투 인지
+        # -------------------------------
+        tone1 = st.radio("당신이 방금 대화한 AI의 말투는 어떠했습니까 ", ["격식체", "해요체", "반말체"])
+
+        # -------------------------------
+        # 3️⃣ 종속변수 – 만족도
+        # -------------------------------
+        sat1 = st.radio("나는AI 챗봇과의 대화가 즐거웠다 ", scale, index=None)
+        sat2 = st.radio("AI 챗봇과 상호작용하는 것이 만족스러웠다 ", scale, index=None)
+        sat3 = st.radio("AI 챗봇과 대화하는 것이 짜증스러웠다.", scale, index=None)
+        sat4 = st.radio("AI 챗봇과 대화하는 것이 매우 어색했다.", scale, index=None)
+
+        # -------------------------------
+        # 4️⃣ 매개 – 적절성
+        # -------------------------------
+        app1 = st.radio("이 상황에서 AI의 말투는 적절했다. ", scale, index=None)
+        app2 = st.radio("AI의 말투는 내가 기대했던 커뮤니케이션 방식과 일치했다. ", scale, index=None)
+        app3 = st.radio("AI의 말투는 내가 기대했던 방식과 잘 맞았다.", scale, index=None)
+
+        # -------------------------------
+        # 5️⃣ 통제 – 무례함
+        # -------------------------------
+        rude1 = st.radio("AI의 말투에서 나를 존중하는 태도가 느껴졌다.", scale, index=None)
+        rude2 = st.radio("AI 의 말투가 나를 무시하는 것처럼 느껴졌다.", scale, index=None)
+        rude3 = st.radio("AI 의 표현은 나를 존중하지 않는다고 느껴졌다.", scale, index=None)
+        rude4 = st.radio("AI 말투는 무례하게 느껴졌다.", scale, index=None)
+
+        # -------------------------------
+        # 6️⃣ 통제 – 전문성
+        # -------------------------------
+        comp1 = st.radio("AI는 전문적으로 보였다.", scale, index=None)
+        comp2 = st.radio("AI 는 신뢰할 수 있는 역량이 있어 보였다.", scale, index=None)
+        comp3 = st.radio("AI 는 정확한 판단을 내릴 수 있을 것 같았다.", scale, index=None)
+
+        # -------------------------------
+        # 7️⃣ 통제 – AI 노출도
+        # -------------------------------
+        exp1 = st.radio("나는 인공지능 기반 기기나 서비스를 자주 이용한다.", scale, index=None)
+        exp2 = st.radio("인공지능은 내 일상생활의 중요한 부분이다.", scale, index=None)
+        exp3 = st.radio("나는 인공지능을 자주 사용한다.", scale, index=None)
+        exp4 = st.radio("나는 일상생활에서 인공지능 기술에 익숙한 편이다. ", scale, index=None)
+
+        save_chat = st.checkbox("✅ 대화 내용도 함께 저장하겠습니다")
+
 
     # -------------------------------
-    # 1️⃣ 조작점검 – 권력 인지
+    # 여행 추천 설문
     # -------------------------------
-    power1 = st.radio("나는 이 대화에서 최종 결정을 내릴 수 있는 입장이었다.", scale, index=None)
-    power2 = st.radio("이 상황에서 결정권은 나에게 있었다.", scale, index=None)
-    power3 = st.radio("AI가 아니라 내가 결과를 통제한다고 느꼈다.", scale, index=None)
+    elif st.session_state.scenario == "recommend":
 
-    # -------------------------------
-    # 2️⃣ 조작점검 – 말투 인지
-    # -------------------------------
-    tone1 = st.radio("AI의 말투는 격식을 갖춘 공식적인 표현이었다.", scale, index=None)
-    tone2 = st.radio("AI의 말투는 일상적인 표현에 가까웠다.", scale, index=None)
-    tone3 = st.radio("AI의 언어는 형식적이었다.", scale, index=None)
+        st.subheader("🔒 여행 추천 상담 설문")
+        st.write("아래 항목에 응답해 주세요.")
 
-    # -------------------------------
-    # 3️⃣ 종속변수 – 만족도
-    # -------------------------------
-    sat1 = st.radio("전반적으로 이 AI와의 대화에 만족한다.", scale, index=None)
-    sat2 = st.radio("이 상호작용은 긍정적인 경험이었다.", scale, index=None)
-    sat3 = st.radio("다시 이런 상황이 있다면 이 AI와 대화하고 싶다.", scale, index=None)
+        # -------------------------------
+        # 인구통계
+        # -------------------------------
+        demo_gender = st.radio("성별을 선택해 주세요:", ["남성", "여성"])
+        demo_age = st.radio("연령대를 선택해 주세요:", ["10대", "20대", "30대", "40대", "50대 이상"])
+        demo_edu = st.radio("최종 학력을 선택해 주세요:", ["고등학교 졸업 이하", "대학교 재학/졸업", "대학원 재학/졸업"])
+        demo_job = st.text_input("현재 직업을 입력해 주세요 (예: 대학생, 회사원 등)")
+        demo_email = st.text_input("연락 가능한 개인 이메일을 입력해 주세요 ")
 
-    # -------------------------------
-    # 4️⃣ 매개 – 적절성
-    # -------------------------------
-    app1 = st.radio("이 상황에서 AI의 말투는 적절했다.", scale, index=None)
-    app2 = st.radio("AI의 말투는 이 상황에 잘 어울렸다.", scale, index=None)
-    app3 = st.radio("AI의 표현 방식은 상황과 조화를 이루었다.", scale, index=None)
+        # ✅ 5점 척도
+        scale = ["전혀 아니다", "아니다", "보통이다", "그렇다", "매우 그렇다"]
 
-    # -------------------------------
-    # 5️⃣ 통제 – 무례함
-    # -------------------------------
-    rude1 = st.radio("AI의 말투는 무례하게 느껴졌다.", scale, index=None)
-    rude2 = st.radio("AI의 표현은 나를 충분히 존중하지 않는다고 느꼈다.", scale, index=None)
+        # -------------------------------
+        # 1️⃣ 조작점검 – 권력 인지
+        # -------------------------------
+        power1 = st.radio("이 대화에서 여행지 선택에 대한 최종 결정권은 나에게 있었다 ", scale, index=None)
+        power2 = st.radio("AI가 아니라 내가 여행지 선택에 대한 결과를 통제한다고 느꼈다.", scale, index=None)
 
-    # -------------------------------
-    # 6️⃣ 통제 – 전문성
-    # -------------------------------
-    comp1 = st.radio("AI는 전문적으로 보였다.", scale, index=None)
-    comp2 = st.radio("AI는 신뢰할 수 있는 역량이 있어 보였다.", scale, index=None)
-    comp3 = st.radio("AI는 정확한 판단을 내릴 수 있을 것 같았다.", scale, index=None)
+        # -------------------------------
+        # 2️⃣ 조작점검 – 말투 인지
+        # -------------------------------
+        tone1 = st.radio("당신이 방금 대화한 AI의 말투는 어떠했습니까 ", ["격식체", "해요체", "반말체"])
 
-    # -------------------------------
-    # 7️⃣ 통제 – AI 노출도
-    # -------------------------------
-    exp1 = st.radio("나는 AI 기반 기기나 서비스를 자주 이용한다.", scale, index=None)
-    exp2 = st.radio("AI는 내 일상생활에서 중요한 부분을 차지한다.", scale, index=None)
-    exp3 = st.radio("나는 AI를 자주 사용한다.", scale, index=None)
-    exp4 = st.radio("나는 일상생활에서 AI 기술에 익숙한 편이다.", scale, index=None)
+        # -------------------------------
+        # 3️⃣ 종속변수 – 만족도
+        # -------------------------------
+        sat1 = st.radio("나는AI 챗봇과의 대화가 즐거웠다 ", scale, index=None)
+        sat2 = st.radio("AI 챗봇과 상호작용하는 것이 만족스러웠다 ", scale, index=None)
+        sat3 = st.radio("AI 챗봇과 대화하는 것이 짜증스러웠다.", scale, index=None)
+        sat4 = st.radio("AI 챗봇과 대화하는 것이 매우 어색했다.", scale, index=None)
 
-    save_chat = st.checkbox("✅ 대화 내용도 함께 저장하겠습니다")
+        # -------------------------------
+        # 4️⃣ 매개 – 적절성
+        # -------------------------------
+        app1 = st.radio("이 상황에서 AI의 말투는 적절했다. ", scale, index=None)
+        app2 = st.radio("AI의 말투는 내가 기대했던 커뮤니케이션 방식과 일치했다. ", scale, index=None)
+        app3 = st.radio("AI의 말투는 내가 기대했던 방식과 잘 맞았다.", scale, index=None)
+
+        # -------------------------------
+        # 5️⃣ 통제 – 무례함
+        # -------------------------------
+        rude1 = st.radio("AI의 말투에서 나를 존중하는 태도가 느껴졌다.", scale, index=None)
+        rude2 = st.radio("AI 의 말투가 나를 무시하는 것처럼 느껴졌다.", scale, index=None)
+        rude3 = st.radio("AI 의 표현은 나를 존중하지 않는다고 느껴졌다.", scale, index=None)
+        rude4 = st.radio("AI 말투는 무례하게 느껴졌다.", scale, index=None)
+
+        # -------------------------------
+        # 6️⃣ 통제 – 전문성
+        # -------------------------------
+        comp1 = st.radio("AI는 전문적으로 보였다.", scale, index=None)
+        comp2 = st.radio("AI 는 신뢰할 수 있는 역량이 있어 보였다.", scale, index=None)
+        comp3 = st.radio("AI 는 정확한 판단을 내릴 수 있을 것 같았다.", scale, index=None)
+
+        # -------------------------------
+        # 7️⃣ 통제 – AI 노출도
+        # -------------------------------
+        exp1 = st.radio("나는 인공지능 기반 기기나 서비스를 자주 이용한다.", scale, index=None)
+        exp2 = st.radio("인공지능은 내 일상생활의 중요한 부분이다.", scale, index=None)
+        exp3 = st.radio("나는 인공지능을 자주 사용한다.", scale, index=None)
+        exp4 = st.radio("나는 일상생활에서 인공지능 기술에 익숙한 편이다. ", scale, index=None)
+
+        save_chat = st.checkbox("✅ 대화 내용도 함께 저장하겠습니다")
+
 
     # --------------------------------------------------
     # 제출 버튼
@@ -960,19 +1044,19 @@ elif st.session_state.get("phase") == "consent":
                 demo_job,
 
                 # 조작점검 – 권력
-                power1, power2, power3,
+                power1, power2,
 
                 # 조작점검 – 말투
-                tone1, tone2, tone3,
+                tone1,
 
                 # 종속
-                sat1, sat2, sat3,
+                sat1, sat2, sat3, sat4,
 
                 # 매개
                 app1, app2, app3,
 
                 # 통제 – 무례함
-                rude1, rude2,
+                rude1, rude2, rude3, rude4,
 
                 # 통제 – 전문성
                 comp1, comp2, comp3,
