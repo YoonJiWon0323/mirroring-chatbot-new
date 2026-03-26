@@ -897,31 +897,26 @@ elif st.session_state.get("phase") == "consent":
         st.subheader("🔒 환불 상담 설문")
         st.write("아래 항목에 응답해 주세요.")
 
-        # -------------------------------
-        # 인구통계
-        # -------------------------------
-        demo_gender = st.radio("성별을 선택해 주세요:", ["남성", "여성"])
-        demo_age = st.radio("연령대를 선택해 주세요:", ["10대", "20대", "30대", "40대", "50대 이상"])
-        demo_edu = st.radio("최종 학력을 선택해 주세요:", ["고등학교 졸업 이하", "대학교 재학/졸업", "대학원 재학/졸업"])
-        demo_job = st.text_input("현재 직업을 입력해 주세요 (예: 대학생, 회사원 등)")
-
         # ✅ 5점 척도
         scale = ["전혀 아니다", "아니다", "보통이다", "그렇다", "매우 그렇다"]
 
         # -------------------------------
         # 1️⃣ 조작점검 – 권력 인지
         # -------------------------------
+        st.divider()
         power1 = st.radio("이 대화에서 환불 선택에 대한 최종 결정권은 나에게 있었다 ", scale, index=None)
         power2 = st.radio("AI가 아니라 내가 환불 선택에 대한 결과를 통제한다고 느꼈다.", scale, index=None)
 
         # -------------------------------
         # 2️⃣ 조작점검 – 말투 인지
         # -------------------------------
+        st.divider()
         tone1 = st.radio("당신이 방금 대화한 AI의 말투는 어떠했습니까 ", ["격식체", "해요체", "반말체"])
 
         # -------------------------------
         # 3️⃣ 종속변수 – 만족도
         # -------------------------------
+        st.divider()
         sat1 = st.radio("나는AI 챗봇과의 대화가 즐거웠다 ", scale, index=None)
         sat2 = st.radio("AI 챗봇과 상호작용하는 것이 만족스러웠다 ", scale, index=None)
         sat3 = st.radio("AI 챗봇과 대화하는 것이 짜증스러웠다.", scale, index=None)
@@ -930,6 +925,7 @@ elif st.session_state.get("phase") == "consent":
         # -------------------------------
         # 4️⃣ 매개 – 적절성
         # -------------------------------
+        st.divider()
         app1 = st.radio("이 상황에서 AI의 말투는 적절했다. ", scale, index=None)
         app2 = st.radio("AI의 말투는 내가 기대했던 커뮤니케이션 방식과 일치했다. ", scale, index=None)
         app3 = st.radio("AI의 말투는 내가 기대했던 방식과 잘 맞았다.", scale, index=None)
@@ -937,6 +933,7 @@ elif st.session_state.get("phase") == "consent":
         # -------------------------------
         # 5️⃣ 통제 – 무례함
         # -------------------------------
+        st.divider()
         rude1 = st.radio("AI의 말투에서 나를 존중하는 태도가 느껴졌다.", scale, index=None)
         rude2 = st.radio("AI 의 말투가 나를 무시하는 것처럼 느껴졌다.", scale, index=None)
         rude3 = st.radio("AI 의 표현은 나를 존중하지 않는다고 느껴졌다.", scale, index=None)
@@ -952,9 +949,19 @@ elif st.session_state.get("phase") == "consent":
         # -------------------------------
         # 7️⃣ 통제 – AI 노출도
         # -------------------------------
+        st.divider()
         exp1 = st.radio("나는 AI 기반 기기나 서비스를 자주 이용한다.", scale, index=None)
         exp2 = st.radio("AI 내 일상생활의 중요한 부분이다.", scale, index=None)
         exp3 = st.radio("나는 일상생활에서 AI 기술에 익숙한 편이다. ", scale, index=None)
+
+        # -------------------------------
+        # 인구통계
+        # -------------------------------
+        st.divider()
+        demo_gender = st.radio("성별을 선택해 주세요:", ["남성", "여성"])
+        demo_age = st.radio("연령대를 선택해 주세요:", ["10대", "20대", "30대", "40대", "50대 이상"])
+        demo_edu = st.radio("최종 학력을 선택해 주세요:", ["고등학교 졸업 이하", "대학교 재학/졸업", "대학원 재학/졸업"])
+        demo_job = st.text_input("현재 직업을 입력해 주세요 (예: 대학생, 회사원 등)")
 
         save_chat = st.checkbox("✅ 대화 내용도 함께 저장하겠습니다")
 
@@ -966,32 +973,27 @@ elif st.session_state.get("phase") == "consent":
 
         st.subheader("🔒 여행 추천 상담 설문")
         st.write("아래 항목에 응답해 주세요.")
-
-        # -------------------------------
-        # 인구통계
-        # -------------------------------
-        demo_gender = st.radio("성별을 선택해 주세요:", ["남성", "여성"])
-        demo_age = st.radio("연령대를 선택해 주세요:", ["10대", "20대", "30대", "40대", "50대 이상"])
-        demo_edu = st.radio("최종 학력을 선택해 주세요:", ["고등학교 졸업 이하", "대학교 재학/졸업", "대학원 재학/졸업"])
-        demo_job = st.text_input("현재 직업을 입력해 주세요 (예: 대학생, 회사원 등)")
-
+        
         # ✅ 5점 척도
         scale = ["전혀 아니다", "아니다", "보통이다", "그렇다", "매우 그렇다"]
 
         # -------------------------------
         # 1️⃣ 조작점검 – 권력 인지
         # -------------------------------
+        st.divider()
         power1 = st.radio("이 대화에서 여행지 선택에 대한 최종 결정권은 나에게 있었다 ", scale, index=None)
         power2 = st.radio("AI가 아니라 내가 여행지 선택에 대한 결과를 통제한다고 느꼈다.", scale, index=None)
 
         # -------------------------------
         # 2️⃣ 조작점검 – 말투 인지
         # -------------------------------
+        st.divider()
         tone1 = st.radio("당신이 방금 대화한 AI의 말투는 어떠했습니까 ", ["격식체", "해요체", "반말체"])
 
         # -------------------------------
         # 3️⃣ 종속변수 – 만족도
         # -------------------------------
+        st.divider()
         sat1 = st.radio("나는 AI 챗봇과의 대화가 즐거웠다 ", scale, index=None)
         sat2 = st.radio("AI 챗봇과 상호작용하는 것이 만족스러웠다 ", scale, index=None)
         sat3 = st.radio("AI 챗봇과 대화하는 것이 짜증스러웠다.", scale, index=None)
@@ -1000,6 +1002,7 @@ elif st.session_state.get("phase") == "consent":
         # -------------------------------
         # 4️⃣ 매개 – 적절성
         # -------------------------------
+        st.divider()
         app1 = st.radio("이 상황에서 AI의 말투는 적절했다. ", scale, index=None)
         app2 = st.radio("AI의 말투는 내가 기대했던 커뮤니케이션 방식과 일치했다. ", scale, index=None)
         app3 = st.radio("AI의 말투는 내가 기대했던 방식과 잘 맞았다.", scale, index=None)
@@ -1007,6 +1010,7 @@ elif st.session_state.get("phase") == "consent":
         # -------------------------------
         # 5️⃣ 통제 – 무례함
         # -------------------------------
+        st.divider()
         rude1 = st.radio("AI의 말투에서 나를 존중하는 태도가 느껴졌다.", scale, index=None)
         rude2 = st.radio("AI 의 말투가 나를 무시하는 것처럼 느껴졌다.", scale, index=None)
         rude3 = st.radio("AI 의 표현은 나를 존중하지 않는다고 느껴졌다.", scale, index=None)
@@ -1015,6 +1019,7 @@ elif st.session_state.get("phase") == "consent":
         # -------------------------------
         # 6️⃣ 통제 – 전문성
         # -------------------------------
+        st.divider()
         comp1 = st.radio("AI는 전문적으로 보였다.", scale, index=None)
         comp2 = st.radio("AI 는 신뢰할 수 있는 역량이 있어 보였다.", scale, index=None)
         comp3 = st.radio("AI 는 정확한 판단을 내릴 수 있을 것 같았다.", scale, index=None)
@@ -1022,9 +1027,19 @@ elif st.session_state.get("phase") == "consent":
         # -------------------------------
         # 7️⃣ 통제 – AI 노출도
         # -------------------------------
+        st.divider()
         exp1 = st.radio("나는 AI 기반 기기나 서비스를 자주 이용한다.", scale, index=None)
         exp2 = st.radio("AI는 내 일상생활의 중요한 부분이다.", scale, index=None)
         exp3 = st.radio("나는 일상생활에서 AI 기술에 익숙한 편이다. ", scale, index=None)
+
+        # -------------------------------
+        # 인구통계
+        # -------------------------------
+        st.divider()
+        demo_gender = st.radio("성별을 선택해 주세요:", ["남성", "여성"])
+        demo_age = st.radio("연령대를 선택해 주세요:", ["10대", "20대", "30대", "40대", "50대 이상"])
+        demo_edu = st.radio("최종 학력을 선택해 주세요:", ["고등학교 졸업 이하", "대학교 재학/졸업", "대학원 재학/졸업"])
+        demo_job = st.text_input("현재 직업을 입력해 주세요 (예: 대학생, 회사원 등)")
 
         save_chat = st.checkbox("✅ 대화 내용도 함께 저장하겠습니다")
 
