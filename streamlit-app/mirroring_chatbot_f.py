@@ -84,7 +84,7 @@ insert_headers_if_empty(survey_ws, [
     "comp1","comp2","comp3",
 
     # AI 노출
-    "exp1","exp2","exp3","exp4"
+    "exp1","exp2","exp3"
 ])
 
 insert_headers_if_empty(conversation_ws, [
@@ -954,8 +954,7 @@ elif st.session_state.get("phase") == "consent":
         # -------------------------------
         exp1 = st.radio("나는 AI 기반 기기나 서비스를 자주 이용한다.", scale, index=None)
         exp2 = st.radio("AI 내 일상생활의 중요한 부분이다.", scale, index=None)
-        exp3 = st.radio("나는 AI를 자주 사용한다.", scale, index=None)
-        exp4 = st.radio("나는 일상생활에서 AI 기술에 익숙한 편이다. ", scale, index=None)
+        exp3 = st.radio("나는 일상생활에서 AI 기술에 익숙한 편이다. ", scale, index=None)
 
         save_chat = st.checkbox("✅ 대화 내용도 함께 저장하겠습니다")
 
@@ -1025,8 +1024,7 @@ elif st.session_state.get("phase") == "consent":
         # -------------------------------
         exp1 = st.radio("나는 AI 기반 기기나 서비스를 자주 이용한다.", scale, index=None)
         exp2 = st.radio("AI는 내 일상생활의 중요한 부분이다.", scale, index=None)
-        exp3 = st.radio("나는 AI를 자주 사용한다.", scale, index=None)
-        exp4 = st.radio("나는 일상생활에서 AI 기술에 익숙한 편이다. ", scale, index=None)
+        exp3 = st.radio("나는 일상생활에서 AI 기술에 익숙한 편이다. ", scale, index=None)
 
         save_chat = st.checkbox("✅ 대화 내용도 함께 저장하겠습니다")
 
@@ -1051,7 +1049,7 @@ elif st.session_state.get("phase") == "consent":
             app1 is None or app2 is None or app3 is None or
             rude1 is None or rude2 is None or rude3 is None or rude4 is None or
             comp1 is None or comp2 is None or comp3 is None or
-            exp1 is None or exp2 is None or exp3 is None or exp4 is None
+            exp1 is None or exp2 is None or exp3 is None
         ):
             st.error("⚠️ 응답하지 않은 문항이 있습니다. 모든 항목을 체크해야 제출할 수 있습니다.")
             st.stop()
@@ -1092,7 +1090,7 @@ elif st.session_state.get("phase") == "consent":
                 comp1, comp2, comp3,
 
                 # AI 노출
-                exp1, exp2, exp3, exp4
+                exp1, exp2, exp3
             ]
 
             survey_ws.append_row(survey_row, value_input_option="USER_ENTERED")
