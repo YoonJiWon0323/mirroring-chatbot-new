@@ -946,10 +946,10 @@ elif st.session_state.get("phase") == "consent":
         # -------------------------------
         # 7️⃣ 통제 – AI 노출도
         # -------------------------------
-        exp1 = st.radio("나는 인공지능 기반 기기나 서비스를 자주 이용한다.", scale, index=None)
-        exp2 = st.radio("인공지능은 내 일상생활의 중요한 부분이다.", scale, index=None)
-        exp3 = st.radio("나는 인공지능을 자주 사용한다.", scale, index=None)
-        exp4 = st.radio("나는 일상생활에서 인공지능 기술에 익숙한 편이다. ", scale, index=None)
+        exp1 = st.radio("나는 AI 기반 기기나 서비스를 자주 이용한다.", scale, index=None)
+        exp2 = st.radio("AI 내 일상생활의 중요한 부분이다.", scale, index=None)
+        exp3 = st.radio("나는 AI를 자주 사용한다.", scale, index=None)
+        exp4 = st.radio("나는 일상생활에서 AI 기술에 익숙한 편이다. ", scale, index=None)
 
         save_chat = st.checkbox("✅ 대화 내용도 함께 저장하겠습니다")
 
@@ -987,7 +987,7 @@ elif st.session_state.get("phase") == "consent":
         # -------------------------------
         # 3️⃣ 종속변수 – 만족도
         # -------------------------------
-        sat1 = st.radio("나는AI 챗봇과의 대화가 즐거웠다 ", scale, index=None)
+        sat1 = st.radio("나는 AI 챗봇과의 대화가 즐거웠다 ", scale, index=None)
         sat2 = st.radio("AI 챗봇과 상호작용하는 것이 만족스러웠다 ", scale, index=None)
         sat3 = st.radio("AI 챗봇과 대화하는 것이 짜증스러웠다.", scale, index=None)
         sat4 = st.radio("AI 챗봇과 대화하는 것이 매우 어색했다.", scale, index=None)
@@ -1017,10 +1017,10 @@ elif st.session_state.get("phase") == "consent":
         # -------------------------------
         # 7️⃣ 통제 – AI 노출도
         # -------------------------------
-        exp1 = st.radio("나는 인공지능 기반 기기나 서비스를 자주 이용한다.", scale, index=None)
-        exp2 = st.radio("인공지능은 내 일상생활의 중요한 부분이다.", scale, index=None)
-        exp3 = st.radio("나는 인공지능을 자주 사용한다.", scale, index=None)
-        exp4 = st.radio("나는 일상생활에서 인공지능 기술에 익숙한 편이다. ", scale, index=None)
+        exp1 = st.radio("나는 AI 기반 기기나 서비스를 자주 이용한다.", scale, index=None)
+        exp2 = st.radio("AI는 내 일상생활의 중요한 부분이다.", scale, index=None)
+        exp3 = st.radio("나는 AI를 자주 사용한다.", scale, index=None)
+        exp4 = st.radio("나는 일상생활에서 AI 기술에 익숙한 편이다. ", scale, index=None)
 
         save_chat = st.checkbox("✅ 대화 내용도 함께 저장하겠습니다")
 
