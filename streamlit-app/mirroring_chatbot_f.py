@@ -795,7 +795,7 @@ elif st.session_state.phase == "conversation":
             end_msg = {
                 "격식체": "여행 아이디어 탐색을 종료하시겠습니까?",
                 "해요체": "여행 아이디어 탐색을 종료할까요?",
-                "반말체": "여행 아이디어 탐색 끝낼까?"
+                "반말체": "여행 아이디어 탐색 종료할까?"
             }
 
             clean = user_input.strip()
@@ -866,7 +866,7 @@ elif st.session_state.phase == "conversation":
             elif st.session_state.tone == "해요체":
                 msg = "더 궁금한 점 없으시면 상담을 종료할까요?"
             else:
-                msg = "더 물어볼 거 없으면 상담 끝낼까?"
+                msg = "더 물어볼 거 없으면 상담 종료할까?"
 
         else:
 
@@ -875,7 +875,7 @@ elif st.session_state.phase == "conversation":
             elif st.session_state.tone == "해요체":
                 msg = "더 찾아볼 여행지가 없으면 상담을 종료할까요?"
             else:
-                msg = "더 찾을 여행지 없으면 여기서 끝낼까?"
+                msg = "더 찾을 여행지 없으면 여기서 종료할까?"
 
         st.session_state.chat_log.append(("assistant", msg))
         st.chat_message("assistant").write(msg)
